@@ -147,7 +147,8 @@ function renderDay() {
     html += `<article class="ex${done ? " done" : ""}" id="ex_${ex.id}">
       <div class="ex-h"><span class="ex-n">${String(i + 1).padStart(2, "0")}</span><h3>${esc(ex.n)}</h3></div>
       <div class="rx"><span>${unit}</span>${rest}${ex.time ? "" : `<span>RIR ${p.rir}</span>`}</div>
-      <p class="note">${esc(ex.note)}</p>`;
+      <p class="note">${esc(ex.note)}</p>` +
+      (ex.setup ? `<p class="setup"><span class="label">ตั้งเครื่อง</span> ${esc(ex.setup)}</p>` : "");
     if (ex.log !== false) {
       html += `<div class="sugg"><span class="tag ${sg.kind}">${esc(sg.tag)}</span><span>${esc(sg.text)}</span>` +
         (last ? `<span class="last mono">ครั้งก่อน ${fmtDate(last.d)}: ${last.w.map((w, k) => w + "×" + last.r[k]).join(", ")}</span>` : "") + `</div>`;

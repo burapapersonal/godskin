@@ -78,6 +78,8 @@ header.top h1{font-size:clamp(36px,8vw,56px);font-weight:800;text-transform:uppe
 .rx{font-family:var(--f-mono);font-size:13px;display:flex;flex-wrap:wrap;gap:6px}
 .rx span{background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:1px 8px}
 .note{margin:0;font-size:14px;color:var(--muted);max-width:75ch}
+.setup{margin:0;font-size:14px;max-width:75ch;padding-left:10px;border-left:3px solid var(--line)}
+.setup .label{font-size:12px;margin-right:4px}
 .sugg{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;font-size:14px;padding:8px 10px;border-radius:8px;background:var(--sunk)}
 .tag{font-family:var(--f-display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:12px;padding:1px 8px;border-radius:4px;color:var(--accent-ink);background:var(--accent)}
 .tag.up{background:var(--good)} .tag.hold,.tag.deload{background:var(--warn)} .tag.down{background:var(--bad)}
