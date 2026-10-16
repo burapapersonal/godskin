@@ -121,8 +121,8 @@ function sparkline(history) {
   const line = xy.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ");
   const [ex, ey] = xy[xy.length - 1];
   return `<svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="แนวโน้ม 1RM ประมาณ จาก ${min} ถึง ${pts[pts.length - 1]} kg">
-    <polyline points="${line}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-    <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5" fill="currentColor"/></svg>
+    <polyline class="ln" pathLength="1" points="${line}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle class="end" cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5" fill="currentColor"/></svg>
     <span class="mono">e1RM ${pts[0]} → ${pts[pts.length - 1]} kg</span>`;
 }
 
@@ -133,6 +133,7 @@ function renderDay() {
     (mins ? `<span class="chip${mins > 90 ? " over" : ""}">≈ ${mins} นาที รวมวอร์ม</span>` : "") + `</div>`;
   if (!d.ex.length) { v.innerHTML = html + `<div class="ex"><p>${esc(d.rest)}</p></div>`; return; }
 
+  html += `<div class="dayprog" id="dayprog"><div class="dp-bar"><i id="dpFill"></i></div><span id="dpText"></span></div>`;
   html += `<div class="exlist">`;
   d.ex.forEach((ex, i) => {
     const n = L.setsFor(ex, p, cut);
@@ -144,8 +145,9 @@ function renderDay() {
     const done = cur && cur.r.length >= n;
     const unit = ex.time ? `${ex.lo}–${ex.hi} นาที` : `${n} × ${ex.lo}–${ex.hi}`;
     const rest = ex.rest ? `<span>พัก ${ex.rest >= 60 ? Math.floor(ex.rest / 60) + ":" + String(ex.rest % 60).padStart(2, "0") : ex.rest + "s"}</span>` : "";
-    html += `<article class="ex${done ? " done" : ""}" id="ex_${ex.id}">
-      <div class="ex-h"><span class="ex-n">${String(i + 1).padStart(2, "0")}</span><h3>${esc(ex.n)}</h3></div>
+    html += `<article class="ex${done ? " done" : ""}" id="ex_${ex.id}" style="--i:${i}">
+      <div class="ex-h"><span class="ex-n">${String(i + 1).padStart(2, "0")}</span><h3>${esc(ex.n)}</h3>` +
+      (ex.log !== false ? `<svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" pathLength="1"/></svg>` : "") + `</div>
       <div class="rx"><span>${unit}</span>${rest}${ex.time ? "" : `<span>RIR ${p.rir}</span>`}</div>
       <p class="note">${esc(ex.note)}</p>` +
       (ex.setup ? `<p class="setup"><span class="label">ตั้งเครื่อง</span> ${esc(ex.setup)}</p>` : "");
@@ -179,6 +181,38 @@ function renderDay() {
     });
   });
   v.querySelectorAll("[data-rest]").forEach((b) => b.addEventListener("click", () => startRest(b.dataset.rest)));
+  updateProgress();
+}
+
+function updateProgress() {
+  const d = DAYS[state.dayIdx], p = phase(), cut = cutOne();
+  const loggable = d.ex.filter((e) => e.log !== false);
+  const box = $("dayprog");
+  if (!box || !loggable.length) return;
+  const done = loggable.filter((e) => (todayEntry(e.id)?.r.length || 0) >= L.setsFor(e, p, cut)).length;
+  const all = done === loggable.length;
+  // let the bar paint at its old width first so the change animates
+  requestAnimationFrame(() => { $("dpFill").style.width = (done / loggable.length) * 100 + "%"; });
+  $("dpText").textContent = all ? "ครบทุกท่า จบวัน" : `${done}/${loggable.length} ท่า`;
+  if (all && !box.classList.contains("complete") && box.dataset.ready) navigator.vibrate?.([60, 40, 60, 40, 120]);
+  box.classList.toggle("complete", all);
+  box.dataset.ready = "1";
+}
+
+// Celebrate once per exercise per day when every set reaches the top of the rep range.
+const celebrated = new Set();
+function celebrate(ex, weights) {
+  const card = $("ex_" + ex.id);
+  if (!card) return;
+  card.querySelector(".pr")?.remove();
+  const next = ex.inc ? `ครั้งหน้าขึ้นเป็น ${Math.round((Math.max(...weights) + ex.inc) * 100) / 100} kg` : "ครั้งหน้าเพิ่มความยาก";
+  const el = document.createElement("div");
+  el.className = "pr";
+  el.setAttribute("role", "status");
+  el.innerHTML = `<div class="pr-bar" aria-hidden="true"><i class="pr-plate a"></i><i class="pr-plate b"></i></div>
+    <div><b>แตะเพดานครบทุกเซ็ต</b><span>${next}</span></div>`;
+  card.querySelector(".row-actions").before(el);
+  navigator.vibrate?.([40, 40, 90]);
 }
 
 const exById = (id) => DAYS.flatMap((d) => d.ex).find((e) => e.id === id);
@@ -215,10 +249,16 @@ async function saveExercise(id) {
     ok.textContent = bad ? "มีช่องที่ไม่ใช่ตัวเลข เซ็ตนั้นยังไม่ถูกบันทึก" : r.length ? "บันทึกอัตโนมัติแล้ว" : "";
   }
   $("ex_" + id)?.classList.toggle("done", r.length >= n);
+
+  const key = id + "|" + today();
+  const topped = !bad && r.length >= n && r.every((x) => x >= ex.hi) && p.mod !== "deload";
+  if (topped && !celebrated.has(key)) { celebrated.add(key); celebrate(ex, w); }
+  if (!topped) { celebrated.delete(key); $("ex_" + id)?.querySelector(".pr")?.remove(); }
+  updateProgress();
 }
 
 /* ---------------- rest timer ---------------- */
-let timerEnd = 0, timerTick = null, audio = null;
+let timerEnd = 0, timerTotal = 1, timerTick = null, audio = null;
 function beep() {
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
@@ -235,17 +275,21 @@ function startRest(id) {
   const ex = exById(id);
   if (!ex?.rest) return;
   try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch { /* ignore */ }
-  timerEnd = Date.now() + ex.rest * 1000;
+  timerTotal = ex.rest * 1000;
+  timerEnd = Date.now() + timerTotal;
   $("timerWhat").textContent = "พัก · " + ex.n;
   $("timer").hidden = false;
-  $("timer").classList.remove("done");
+  $("timer").classList.remove("done", "urgent");
   clearInterval(timerTick);
   timerTick = setInterval(tickTimer, 250);
   tickTimer();
 }
 function tickTimer() {
-  const left = Math.max(0, Math.round((timerEnd - Date.now()) / 1000));
+  const ms = Math.max(0, timerEnd - Date.now());
+  const left = Math.ceil(ms / 1000);
   $("timerT").textContent = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+  $("timerRing").style.strokeDashoffset = String(100 * (1 - Math.min(1, ms / timerTotal)));
+  $("timer").classList.toggle("urgent", left > 0 && left <= 10);
   if (left === 0) {
     clearInterval(timerTick);
     $("timer").classList.add("done");
@@ -255,8 +299,12 @@ function tickTimer() {
   }
 }
 $("timerPlus").onclick = () => {
-  if ($("timer").classList.contains("done")) { timerEnd = Date.now(); $("timer").classList.remove("done"); timerTick = setInterval(tickTimer, 250); }
-  timerEnd += 30000; tickTimer();
+  if ($("timer").classList.contains("done")) {
+    timerEnd = Date.now(); timerTotal = 0;
+    $("timer").classList.remove("done");
+    timerTick = setInterval(tickTimer, 250);
+  }
+  timerEnd += 30000; timerTotal += 30000; tickTimer();
 };
 $("timerStop").onclick = () => { clearInterval(timerTick); $("timer").hidden = true; };
 

@@ -150,6 +150,11 @@
 
 <div class="timer" id="timer" hidden>
   <div class="in">
+    <svg class="ring" viewBox="0 0 44 44" aria-hidden="true">
+      <circle class="trk" cx="22" cy="22" r="18"/>
+      <circle class="arc" id="timerRing" cx="22" cy="22" r="18" pathLength="100"/>
+      <circle class="hub" cx="22" cy="22" r="5"/>
+    </svg>
     <span class="t" id="timerT">0:00</span>
     <span class="what" id="timerWhat"></span>
     <button id="timerPlus">+30s</button>
