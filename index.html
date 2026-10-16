@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Godskin Program</title>
+<meta name="description" content="บันทึกการซ้อมสร้างกล้าม 6 วัน/สัปดาห์ พร้อม progressive overload อัตโนมัติ">
+<meta name="theme-color" content="#14181D">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header class="top wrap">
+  <div>
+    <div class="label">Hypertrophy block · 8 สัปดาห์ · Double progression</div>
+    <h1>Godskin</h1>
+  </div>
+  <span class="chip" id="today"></span>
+</header>
+
+<div class="bar">
+  <div class="wrap">
+    <div class="weekrow">
+      <div class="weeks" id="weeks" role="group" aria-label="สัปดาห์ของบล็อก"></div>
+      <div class="phase"><b id="phaseName"></b><span id="phaseDesc"></span></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-train" data-tab="train">ซ้อม</button>
+      <button role="tab" id="tab-body" data-tab="body">น้ำหนักตัว</button>
+      <button role="tab" id="tab-check" data-tab="check">Check-in</button>
+      <button role="tab" id="tab-rules" data-tab="rules">กติกา</button>
+      <button role="tab" id="tab-data" data-tab="data">สำรองข้อมูล</button>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+  <section id="p-train" data-page="train">
+    <div id="banners"></div>
+    <div class="days" id="days" role="group" aria-label="เลือกวัน"></div>
+    <div id="dayView"></div>
+  </section>
+
+  <section id="p-body" class="page" data-page="body" hidden></section>
+  <section id="p-check" class="page" data-page="check" hidden></section>
+  <section id="p-data" class="page" data-page="data" hidden></section>
+
+  <section id="p-rules" class="page" data-page="rules" hidden>
+    <h2>กติกาของโปรแกรม</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Progressive overload</h3>
+        <ul>
+          <li>ทุกท่ามีช่วงครั้ง เช่น 6–10 เริ่มที่น้ำหนักที่ทำได้ราว 7 ครั้งโดยเหลือแรงตาม RIR ของสัปดาห์</li>
+          <li>ทุกเซ็ตแตะเพดาน (เช่น 10,10,10) แล้วค่อยเพิ่มน้ำหนัก: อก/หลัง/ไหล่ +2.5 kg, ดัมเบล +1–2 kg ต่อข้าง, ขา +5 kg</li>
+          <li>ยังไม่ถึงเพดาน ใช้น้ำหนักเดิม พยายามเพิ่มอย่างน้อย 1 ครั้งในเซ็ตใดเซ็ตหนึ่ง</li>
+          <li>มีเซ็ตต่ำกว่าพื้น (เช่นได้ 5 ใน 6–10) สองครั้งติด ลดน้ำหนัก 10% แล้วไต่ใหม่</li>
+          <li>ฟอร์มต้องเหมือนเดิมทุกครั้ง ถ้าเพิ่มน้ำหนักแล้วช่วงการเคลื่อนไหวสั้นลง ถือว่าไม่นับ</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>อกกับหลัง พักเท่ากันไหม</h3>
+        <p>ในทางปฏิบัติใกล้เคียงกันมาก ประมาณ 48–72 ชั่วโมง สิ่งที่กำหนดการฟื้นตัวจริงๆ คือจำนวนเซ็ตหนักและความใกล้ล้มเหลว มากกว่าตัวกล้ามเนื้อ</p>
+        <p>ที่ต่างชัดคือขา (กล้ามใหญ่ ใช้ระบบประสาทเยอะ) กับข้อไหล่ (โดนทั้งวันอกและวันไหล่) ตารางนี้จึงเว้นขา 3–4 วันระหว่าง A กับ B และวางวันไหล่ห่างจากวันอก</p>
+      </div>
+      <div class="card">
+        <h3>เวลาพักระหว่างเซ็ต</h3>
+        <ul>
+          <li>ท่าหลายข้อต่อหนัก (Squat, Press, RDL): 2–3 นาที</li>
+          <li>ท่ารอง (Row, Pulldown, Leg press): 1.5–2 นาที</li>
+          <li>ท่าแยกส่วน (Fly, Raise, Curl): 60–90 วินาที</li>
+          <li>กรอกจำนวนครั้งเสร็จ ตัวจับเวลาพักจะเริ่มเองตามเวลาของท่านั้น</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Cardio แบบใหม่</h3>
+        <p>เดิมวิ่งเย็นทุกวันที่ยกเวท รวมแล้วเกือบ 2 เซสชันต่อวัน นี่น่าจะเป็นตัวกินพลังงานและการฟื้นตัวมากกว่าตัวเวทเอง</p>
+        <ul>
+          <li>Zone 2 (ยังพูดเป็นประโยคได้) 20–40 นาที 2–3 ครั้ง/สัปดาห์ พอสำหรับหัวใจ</li>
+          <li>เลือกเดินชัน (incline walk) ไม่วิ่ง ไม่ปั่นจักรยานอานแข็ง ในช่วง 6 สัปดาห์หลังขลิบ</li>
+          <li>ห้ามทำ cardio หนักก่อนวันขา</li>
+        </ul>
+      </div>
+      <div class="card warn">
+        <h3>กลับมาหลังขลิบ</h3>
+        <ul>
+          <li>สัปดาห์ 1–2 ของโปรแกรมคือช่วงกลับมา: น้ำหนักราว 60–70% ของเดิม เหลือแรง 3–4 ครั้ง ไม่เบ่งกลั้นหายใจ</li>
+          <li>ขอให้แผลปิดสนิท ไม่บวม ไม่มีเลือดซึม ก่อนเริ่ม และถ้าเป็นไปได้ให้หมอที่ทำยืนยันว่ายกหนักได้แล้ว</li>
+          <li>สัปดาห์ 1–2 ใช้ Leg press/Hack squat แทน Barbell squat และ 45° back extension แทน RDL</li>
+          <li>ใส่กางเกงในกระชับ ลดการเสียดสี มีอาการปวด บวม หรือเลือดออก หยุดเล่นวันนั้นทันที</li>
+        </ul>
+      </div>
+      <div class="card warn">
+        <h3>สมรรถภาพทางเพศกับการซ้อม</h3>
+        <p>อาการแบบที่เคยเป็นมักมาจากภาระรวมสูงเกินร่วมกับกินไม่พอและนอนน้อย ซึ่งไปกดฮอร์โมน มากกว่าจำนวนนาทีอย่างเดียว ตารางนี้จึงคุมทั้งเวลาและปริมาณเซ็ต</p>
+        <ul>
+          <li>บันทึกในแท็บ Check-in ทุกเช้า ถ้ามีสัญญาณเตือน 2 ข้อขึ้นไปติดกัน 3 วัน แอปจะตัดเซ็ตทุกท่าลง 1 ให้อัตโนมัติ และควรเพิ่มอาหาร 300 kcal</li>
+          <li>ไม่ดีขึ้นใน 2 สัปดาห์ ควรตรวจเลือดดู testosterone ตอนเช้า</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>อาหาร</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>เป้าต่อวัน (lean bulk)</h3>
+        <div class="tbl"><table>
+          <tr><th>สารอาหาร</th><th>เป้า</th><th>ต่อ kg</th></tr>
+          <tr><td>พลังงาน</td><td class="num">2,900–3,100 kcal</td><td class="num">~39</td></tr>
+          <tr><td>โปรตีน</td><td class="num">140–160 g</td><td class="num">1.8–2.1</td></tr>
+          <tr><td>คาร์บ</td><td class="num">350–420 g</td><td class="num">4.5–5.5</td></tr>
+          <tr><td>ไขมัน</td><td class="num">70–90 g</td><td class="num">0.9–1.2</td></tr>
+        </table></div>
+        <p>ชั่งตัวทุกเช้าในแท็บน้ำหนักตัว แอปจะเทียบค่าเฉลี่ย 7 วันให้ เป้าขึ้น 0.2–0.35 kg/สัปดาห์</p>
+      </div>
+      <div class="card">
+        <h3>ที่กินอยู่ตอนนี้</h3>
+        <ul>
+          <li>หมูสันนอก/หมูบด lean 500–600 g (ดิบ) ได้โปรตีนราว 105–130 g ดีแล้ว แต่ไขมันต่ำไป ระวังไขมันรวมต่ำกว่า 60 g ซึ่งไม่ดีต่อฮอร์โมน</li>
+          <li>เพิ่มไข่ทั้งฟอง 3 ฟอง/วัน และน้ำมันปรุงอาหารปกติ จะได้ทั้งโปรตีน ไขมัน และสังกะสี</li>
+          <li>มาม่า 1 ห่อ โซเดียมราว 1,500 mg ไม่เกิน 1 ห่อ/วัน มื้ออื่นใช้ข้าว ข้าวโอ๊ต มัน กล้วย</li>
+          <li>มื้อก่อนซ้อม 1.5–2 ชม.: ข้าว + โปรตีน, หลังซ้อม: ข้าวเยอะ + โปรตีน 35–40 g</li>
+          <li>Creatine monohydrate 3–5 g ทุกวัน เป็นอาหารเสริมที่หลักฐานดีที่สุดสำหรับเป้านี้</li>
+          <li>นอน 7.5–9 ชม. สำคัญเท่ากับการกิน</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="timer" id="timer" hidden>
+  <div class="in">
+    <span class="t" id="timerT">0:00</span>
+    <span class="what" id="timerWhat"></span>
+    <button id="timerPlus">+30s</button>
+    <button id="timerStop">ปิด</button>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

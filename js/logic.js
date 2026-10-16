@@ -1,0 +1,122 @@
+// Pure training logic. No DOM, no storage, so it can be tested with plain Node.
+
+const DAY_MS = 864e5;
+
+export function isoDate(d = new Date()) {
+  const t = new Date(d);
+  t.setMinutes(t.getMinutes() - t.getTimezoneOffset());
+  return t.toISOString().slice(0, 10);
+}
+export function addDays(iso, n) {
+  return isoDate(new Date(Date.parse(iso + "T00:00:00") + n * DAY_MS));
+}
+function daysBetween(a, b) {
+  return Math.round((Date.parse(b + "T00:00:00") - Date.parse(a + "T00:00:00")) / DAY_MS);
+}
+export function mondayOf(iso) {
+  const dow = new Date(iso + "T00:00:00").getDay();
+  return addDays(iso, -((dow + 6) % 7));
+}
+
+// Week 1–8 of the block. After week 8 the next block starts at week 3 (re-entry is a one-off).
+export function weekFor(startDate, today) {
+  const days = daysBetween(startDate, today);
+  if (days < 0) return 1;
+  const w = Math.floor(days / 7) + 1;
+  return w <= 8 ? w : 3 + ((w - 9) % 6);
+}
+// Start date that makes `today` fall in week n, aligned to Monday.
+export function startForWeek(n, today) {
+  return addDays(mondayOf(today), -(n - 1) * 7);
+}
+
+export function setsFor(ex, phase, cutOne = false) {
+  let n = phase.mod === "deload" ? Math.max(1, Math.ceil(ex.s / 2)) : ex.s;
+  if (cutOne && !ex.time) n = Math.max(1, n - 1);
+  return n;
+}
+
+// Rough session length: 10 min warm-up + per set (45 s work + rest) + 1 min setup per exercise.
+export function minutes(day, phase, cutOne = false) {
+  if (!day.ex.length) return 0;
+  let s = 10 * 60;
+  for (const ex of day.ex) {
+    if (ex.time) { s += ex.hi * 60; continue; }
+    s += setsFor(ex, phase, cutOne) * (45 + ex.rest) + 60;
+  }
+  return Math.round(s / 60);
+}
+
+const roundTo = (x, step) => (step ? Math.round(x / step) * step : x);
+const kg = (v) => Math.round(v * 100) / 100 + " kg";
+
+// Double progression. `history` is the exercise's log; entries dated `today` are ignored
+// so the suggestion stays stable while today's sets are being typed in.
+export function suggest(ex, phase, history = [], today = isoDate()) {
+  const past = history.filter((h) => h.d < today);
+  const last = past[past.length - 1];
+  const prev = past[past.length - 2];
+  if (!last) {
+    return { kind: "start", tag: "เริ่ม", weight: null,
+      text: ex.start || `ยังไม่มีบันทึก เลือกน้ำหนักที่ทำได้ราว ${ex.lo + 1} ครั้ง แบบเหลือแรง ${phase.rir} ครั้ง` };
+  }
+  const w = Math.max(...last.w.map(Number));
+  const reps = last.r.map(Number);
+  if (phase.mod === "deload") {
+    return { kind: "deload", tag: "deload", weight: w, text: `ใช้ ${kg(w)} × ${ex.lo} ครั้ง เซ็ตน้อยลงครึ่งหนึ่ง เบาสบาย` };
+  }
+  const below = (r) => r.some((x) => x < ex.lo);
+  if (below(reps) && prev && below(prev.r.map(Number))) {
+    const nw = roundTo(w * 0.9, ex.inc || 0.5);
+    return { kind: "down", tag: "ลด", weight: nw, text: `ต่ำกว่า ${ex.lo} ครั้งสองรอบติด ลดเป็น ${kg(nw)} แล้วไต่ใหม่` };
+  }
+  if (reps.length >= 1 && reps.every((x) => x >= ex.hi)) {
+    if (!ex.inc) return { kind: "up", tag: "เพิ่ม", weight: w, text: "แตะเพดานแล้ว เพิ่มความยาก (ช้าลง/ค้างนานขึ้น) หรือเพิ่มน้ำหนักถ่วง" };
+    const nw = Math.round((w + ex.inc) * 100) / 100;
+    return { kind: "up", tag: "เพิ่ม", weight: nw, text: `แตะ ${ex.hi} ครบทุกเซ็ต ขึ้นเป็น ${kg(nw)} เป้า ${ex.lo}+ ครั้ง` };
+  }
+  const total = reps.reduce((a, b) => a + b, 0);
+  return { kind: "hold", tag: "คงไว้", weight: w, text: `ใช้ ${kg(w)} ต่อ เป้ารวมเกิน ${total} ครั้ง (เพิ่มอย่างน้อย 1 ครั้ง)` };
+}
+
+// Best estimated 1RM (Epley) per session, for the trend line.
+export function e1rm(entry) {
+  let best = 0;
+  entry.w.forEach((w, i) => {
+    const r = Number(entry.r[i]);
+    if (w > 0 && r > 0) best = Math.max(best, w * (1 + r / 30));
+  });
+  return Math.round(best * 10) / 10;
+}
+
+// Readiness: a day is "red" when 2+ warning signs are ticked.
+export const SIGNS = [
+  { k: "noMorning", t: "ตื่นเช้าไม่มีอาการแข็งตัว" },
+  { k: "lowLibido", t: "ความต้องการทางเพศลดลงชัด" },
+  { k: "poorSleep", t: "นอนไม่ถึง 7 ชม. หรือหลับไม่สนิท" },
+  { k: "highRhr", t: "ชีพจรตอนตื่นสูงกว่าปกติ 5+ ครั้ง/นาที" },
+  { k: "sore", t: "ยังปวดกล้ามจากครั้งก่อนจนเล่นท่าเดิมไม่ไหว" },
+];
+export function redDay(c) {
+  return !!c && SIGNS.filter((s) => c[s.k]).length >= 2;
+}
+// Three red days in a row ending today (or yesterday, if today has no check-in yet).
+export function needsCut(checkins, today) {
+  let end = checkins[today] ? today : addDays(today, -1);
+  for (let i = 0; i < 3; i++) if (!redDay(checkins[addDays(end, -i)])) return false;
+  return true;
+}
+
+// Body weight: 7-day average ending at `today`, and change versus the 7 days before.
+export function bodyTrend(entries, today) {
+  const avg = (from, to) => {
+    const xs = entries.filter((e) => e.d > from && e.d <= to).map((e) => e.kg);
+    return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+  };
+  const cur = avg(addDays(today, -7), today);
+  const before = avg(addDays(today, -14), addDays(today, -7));
+  const delta = cur != null && before != null ? cur - before : null;
+  let verdict = null;
+  if (delta != null) verdict = delta < 0.2 ? "slow" : delta > 0.35 ? "fast" : "ok";
+  return { cur, before, delta, verdict };
+}
