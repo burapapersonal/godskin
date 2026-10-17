@@ -30,6 +30,7 @@ async function boot() {
   state.checkins = await S.get("checkins", {});
   state.food = await S.get("food", {});
   state.measures = await S.get("measures", []);
+  state.photos = await S.get("photos", []);   // [{ id, d, pose }]; images under "photo:<id>"
   if (!state.settings.startDate) {
     state.settings.startDate = L.startForWeek(1, today());
     await S.set("settings", state.settings);
@@ -664,7 +665,9 @@ function renderGoals() {
         </table></div>
         <p class="note">แขนกับอกขึ้น เอวขึ้นไม่เกิน 1 cm/เดือน = ได้กล้ามเป็นหลัก ถ้าเอวขึ้นเกิน 1.5 cm/4 สัปดาห์ ไขมันขึ้นเร็วเกิน ซึ่งกดฮอร์โมนเพศชายได้ ให้ลดลงมาโหมด Lean</p>
       </div>
-    </div>`;
+    </div>
+    ${photosHtml()}`;
+  wirePhotos();
 
   $("goalKg").onchange = async () => {
     const v = Number($("goalKg").value);
@@ -688,6 +691,127 @@ function renderGoals() {
     renderGoals();
     $("mOk").textContent = "บันทึกแล้ว";
   };
+}
+
+/* ---------------- progress photos ----------------
+   Images stay on this device: the blob lives in IndexedDB under "photo:<id>", metadata in "photos".
+   Nothing is uploaded anywhere. */
+const POSES = { front: "หน้า", side: "ข้าง", back: "หลัง" };
+const photoUrls = new Map();
+let photoPose = "front", photoCmp = {}, photoDelArm = null;
+
+async function photoUrl(id) {
+  if (photoUrls.has(id)) return photoUrls.get(id);
+  const b = await S.get("photo:" + id, null);
+  if (!(b instanceof Blob)) return null;
+  const u = URL.createObjectURL(b);
+  photoUrls.set(id, u);
+  return u;
+}
+
+// Downscale to 1280 px on the long side as JPEG; keeps each photo around 150–300 KB.
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const src = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * k);
+      c.height = Math.round(img.naturalHeight * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(src);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error("แปลงรูปไม่ได้"))), "image/jpeg", 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error("เปิดไฟล์รูปนี้ไม่ได้")); };
+    img.src = src;
+  });
+}
+
+// Body weight on or near a date (within 3 days), for captions.
+function kgNear(d) {
+  let best = null;
+  for (const e of state.body) {
+    const gap = Math.abs(Date.parse(e.d) - Date.parse(d)) / 864e5;
+    if (gap <= 3 && (!best || gap < best.gap)) best = { kg: e.kg, gap };
+  }
+  return best ? best.kg.toFixed(1) + " kg" : "";
+}
+
+function photosHtml() {
+  const list = (state.photos || []).filter((p) => p.pose === photoPose).sort((a, b) => (a.d < b.d ? -1 : 1));
+  const all = state.photos || [];
+  const lastD = all.length ? all.map((p) => p.d).sort().pop() : null;
+  const due = !lastD || Date.now() - Date.parse(lastD) > 30 * 864e5;
+  const from = list.find((p) => p.id === photoCmp.from) || list[0];
+  const to = list.find((p) => p.id === photoCmp.to) || list[list.length - 1];
+  const opt = (sel) => list.map((p) => `<option value="${p.id}" ${p.id === sel?.id ? "selected" : ""}>${fmtDate(p.d)}/${p.d.slice(2, 4)}</option>`).join("");
+  const fig = (p, label) => `<figure class="ph"><img data-photo="${p.id}" alt="รูป${POSES[p.pose]} ${p.d}">
+    <figcaption><b>${label}</b> ${fmtDate(p.d)}/${p.d.slice(2, 4)} <span class="mono">${kgNear(p.d)}</span></figcaption></figure>`;
+  return `<div class="card" id="photos">
+    <h3>รูปความคืบหน้า</h3>
+    <p class="note">รูปเก็บในเครื่องนี้เท่านั้น ไม่อัปโหลดไปไหน ถ่ายเดือนละครั้งวันเดียวกับวัดรอบตัว ที่เดิม แสงเดิม ระยะเดิม ยืนสบายไม่เกร็ง ครบ 3 ท่า</p>
+    ${due ? `<div class="banner"><b>${lastD ? "ครบเดือนแล้ว" : "ยังไม่มีรูป"}</b> ${lastD ? "ถึงเวลาถ่ายรูปรอบใหม่" : "ถ่ายรูปแรกไว้เป็นจุดเริ่มต้น พอผ่านไป 3 เดือนจะเห็นความต่างชัด"}</div>` : ""}
+    <div class="seg" role="group" aria-label="ท่า">${Object.entries(POSES).map(([k, n]) =>
+      `<button id="pose-${k}" data-pose="${k}" aria-pressed="${k === photoPose}">${n} ${all.filter((p) => p.pose === k).length}</button>`).join("")}</div>
+    <div class="field">
+      <input type="date" id="phDate" value="${today()}" max="${today()}" aria-label="วันที่ถ่าย">
+      <label class="btn" for="phFile">เพิ่มรูปท่า${POSES[photoPose]}</label>
+      <input type="file" id="phFile" accept="image/*" class="vh">
+      <span id="phMsg" class="note"></span>
+    </div>
+    ${list.length >= 2 ? `<div class="cmp">
+        <div class="field"><label for="cmpFrom">เทียบ</label><select id="cmpFrom">${opt(from)}</select>
+        <label for="cmpTo">กับ</label><select id="cmpTo">${opt(to)}</select></div>
+        <div class="phpair">${fig(from, "ก่อน")}${fig(to, "หลัง")}</div>
+      </div>` : list.length === 1 ? `<p class="note">มีรูปท่า${POSES[photoPose]} 1 รูป เพิ่มอีกรูปในเดือนหน้าแล้วจะเทียบกันได้</p>` : ""}
+    ${list.length ? `<div class="phgrid">${list.slice().reverse().map((p) => `<div class="thumb">
+        <img data-photo="${p.id}" alt="รูป${POSES[p.pose]} ${p.d}">
+        <div class="thumb-f"><span class="mono">${fmtDate(p.d)}/${p.d.slice(2, 4)}</span>
+        <button class="x${photoDelArm === p.id ? " armed" : ""}" data-phdel="${p.id}" aria-label="ลบรูป ${p.d}">${photoDelArm === p.id ? "ลบ?" : "×"}</button></div></div>`).join("")}</div>` : ""}
+  </div>`;
+}
+
+function wirePhotos() {
+  document.querySelectorAll("img[data-photo]").forEach(async (img) => {
+    const u = await photoUrl(img.dataset.photo);
+    if (u) img.src = u; else img.alt = "หารูปไม่เจอในเครื่องนี้";
+  });
+  const rerender = () => { const y = window.scrollY; renderGoals(); window.scrollTo(0, y); };
+  document.querySelectorAll("[data-pose]").forEach((b) => b.onclick = () => { photoPose = b.dataset.pose; photoCmp = {}; photoDelArm = null; rerender(); });
+  const cf = $("cmpFrom"), ct = $("cmpTo");
+  if (cf) cf.onchange = ct.onchange = () => { photoCmp = { from: cf.value, to: ct.value }; rerender(); };
+  $("phFile").onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file || e.target.dataset.busy) return;
+    e.target.dataset.busy = "1";
+    $("phMsg").textContent = "กำลังบันทึก...";
+    try {
+      const blob = await shrinkImage(file);
+      const id = uid();
+      await S.set("photo:" + id, blob);
+      const back = await S.get("photo:" + id, null);
+      if (!(back instanceof Blob)) throw new Error("เบราว์เซอร์นี้เก็บรูปไม่ได้ (โหมดส่วนตัว?)");
+      state.photos = (state.photos || []).concat({ id, d: $("phDate").value || today(), pose: photoPose });
+      await S.set("photos", state.photos);
+      photoCmp = {};
+      rerender();
+    } catch (err) {
+      delete e.target.dataset.busy;
+      $("phMsg").className = "err";
+      $("phMsg").textContent = err.message;
+    }
+  };
+  document.querySelectorAll("[data-phdel]").forEach((b) => b.onclick = async () => {
+    const id = b.dataset.phdel;
+    if (photoDelArm !== id) { photoDelArm = id; rerender(); return; } // first tap arms, second tap deletes
+    photoDelArm = null;
+    state.photos = state.photos.filter((p) => p.id !== id);
+    await S.set("photos", state.photos);
+    await S.del("photo:" + id);
+    if (photoUrls.has(id)) { URL.revokeObjectURL(photoUrls.get(id)); photoUrls.delete(id); }
+    rerender();
+  });
 }
 
 /* ---------------- body weight ---------------- */
@@ -774,6 +898,7 @@ function renderData() {
         <p><span class="mono">${days}</span> วันที่ซ้อม · <span class="mono">${sessions}</span> รายการท่า · <span class="mono">${state.body.length}</span> ครั้งที่ชั่งน้ำหนัก</p>
         <p class="note">เริ่มบล็อก ${fmtDate(state.settings.startDate)} · สำรองล่าสุด ${state.settings.lastExport ? new Date(state.settings.lastExport).toLocaleDateString("th-TH") : "ยังไม่เคย"}</p>
         <p class="note">ข้อมูลอยู่ในเบราว์เซอร์ของเครื่องนี้ ถ้าล้างข้อมูลเว็บหรือเปลี่ยนเครื่องจะหาย ควร Export ทุกสัปดาห์</p>
+        ${state.photos?.length ? `<label class="checkline"><input type="checkbox" id="expPhotos"> รวมรูปความคืบหน้า ${state.photos.length} รูปในไฟล์ด้วย (ไฟล์ใหญ่ขึ้นราว ${Math.round(state.photos.length * 0.3)} MB เก็บไฟล์นี้ในที่ส่วนตัวเท่านั้น)</label>` : ""}
         <div class="row-actions"><button class="btn" id="exp">Export ไฟล์ JSON</button></div>
       </div>
       <div class="card">
@@ -784,6 +909,14 @@ function renderData() {
     </div>`;
   $("exp").onclick = async () => {
     const data = await S.exportAll();
+    if ($("expPhotos")?.checked && state.photos?.length) {
+      data.photos = state.photos;
+      data.photoData = {};
+      for (const p of state.photos) {
+        const b = await S.get("photo:" + p.id, null);
+        if (b instanceof Blob) data.photoData[p.id] = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
+      }
+    }
     const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -802,6 +935,17 @@ function renderData() {
       const merged = S.mergeData(state, inc);
       Object.assign(state, merged);
       for (const k of S.KEYS) await S.set(k, state[k]);
+      // photos travel only when the backup was exported with them
+      if (Array.isArray(inc.photos) && inc.photoData) {
+        const have = new Set((state.photos || []).map((p) => p.id));
+        for (const p of inc.photos) {
+          const url = inc.photoData[p.id];
+          if (have.has(p.id) || typeof url !== "string" || !url.startsWith("data:image/")) continue;
+          await S.set("photo:" + p.id, await (await fetch(url)).blob());
+          state.photos = (state.photos || []).concat({ id: p.id, d: p.d, pose: p.pose });
+        }
+        await S.set("photos", state.photos);
+      }
       renderAll();
       $("impOk").className = "saved"; $("impOk").textContent = "นำเข้าเรียบร้อย";
     } catch (err) {

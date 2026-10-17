@@ -43,6 +43,11 @@ export async function set(key, value) {
   }
 }
 
+export async function del(key) {
+  try { await tx("readwrite", (s) => s.delete(key)); } catch { /* nothing to delete */ }
+  try { localStorage.removeItem("godskin." + key); } catch { /* storage unavailable */ }
+}
+
 // Ask the browser not to evict our data under storage pressure.
 export async function persist() {
   try { return navigator.storage?.persist ? await navigator.storage.persist() : false; } catch { return false; }
