@@ -342,7 +342,8 @@ function renderFood() {
   const d = today(), s = state.settings;
   const { kg, src } = currentKg();
   const cm = s.height || 183;
-  const tg = s.age ? L.targets(kg, cm, s.age) : null;
+  const age = s.dob ? L.ageOn(s.dob, d) : s.age;
+  const tg = age ? L.targets(kg, cm, age) : null;
   const entries = state.food[d] || [];
   const tot = L.dayTotals(entries);
   const meals = L.groupMeals(entries);
@@ -381,14 +382,17 @@ function renderFood() {
       <div class="card">
         <h3>เป้าต่อวัน</h3>
         <div class="field">
-          <label for="age">อายุ</label><input type="number" id="age" min="15" max="80" inputmode="numeric" value="${s.age ?? ""}" placeholder="ปี">
+          <label for="dob">วันเกิด</label><input type="date" id="dob" min="1940-01-01" max="${d}" value="${s.dob ?? ""}">
+          ${age ? `<span class="mono">อายุ ${age} ปี</span>` : ""}
+        </div>
+        <div class="field">
           <label for="height">สูง</label><input type="number" id="height" min="140" max="220" inputmode="numeric" value="${cm}"><span>cm</span>
         </div>
         ${tg ? `<div class="big">${tg.kcal.toLocaleString()} kcal</div>
           <p class="mono">โปรตีน ${tg.p} g · คาร์บ ${tg.c} g · ไขมัน ${tg.f} g</p>
           <p class="note">ใช้น้ำหนัก ${kg.toFixed(1)} kg (${src}) · ใช้พลังงานต่อวัน ~${tg.tdee.toLocaleString()} kcal + ส่วนเกิน ${L.SURPLUS} kcal สำหรับสร้างกล้าม</p>
           ${trendTip ? `<p class="note">${trendTip}</p>` : ""}`
-        : `<p class="note">กรอกอายุเพื่อคำนวณให้ตรงตัว ระหว่างนี้ใช้ช่วง 2,900–3,100 kcal</p>`}
+        : `<p class="note">กรอกวันเกิดเพื่อคำนวณให้ตรงตัว ระหว่างนี้ใช้ช่วง 2,900–3,100 kcal</p>`}
       </div>
       <div class="card">
         <h3>พร้อมซ้อมเมื่อไร</h3>
@@ -495,13 +499,14 @@ function renderFood() {
     addFood({ t: nowHM(), n, qty: 1, unit: "ที่", kcal: Math.round(k), p: Number($("cp").value) || 0, c: Number($("cc").value) || 0, f: Number($("cf").value) || 0 });
   };
   const saveProfile = async () => {
-    const age = Number($("age").value), h = Number($("height").value);
-    state.settings.age = age >= 15 && age <= 80 ? age : undefined;
+    const dob = $("dob").value, h = Number($("height").value);
+    const a = dob ? L.ageOn(dob, d) : 0;
+    state.settings.dob = a >= 15 && a <= 80 ? dob : undefined;
     state.settings.height = h >= 140 && h <= 220 ? h : 183;
     await S.set("settings", state.settings);
     renderFood();
   };
-  $("age").onchange = saveProfile;
+  $("dob").onchange = saveProfile;
   $("height").onchange = saveProfile;
 }
 

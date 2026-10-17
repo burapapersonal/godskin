@@ -133,7 +133,7 @@ section.page > h2{font-size:32px;text-transform:uppercase;font-weight:800}
 .timer.done{background:var(--good);color:#fff}
 /* ---------- food ---------- */
 .field label{font-size:14px;color:var(--muted)}
-.field input[type=time],.field input:not([type]),.field select{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;min-width:0}
+.field input[type=time],.field input[type=date],.field input:not([type]),.field select{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;min-width:0}
 .field select{width:100%}
 .field input[type=number]{width:96px}
 .macros{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}

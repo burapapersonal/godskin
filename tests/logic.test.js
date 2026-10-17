@@ -80,3 +80,14 @@ test("entries far apart are separate meals", () => {
   const e = (t) => ({ t, kcal: 100, p: 1, c: 1, f: 1 });
   assert.equal(L.groupMeals([e("08:00"), e("08:30"), e("12:00")]).length, 2);
 });
+
+test("age from birth date rolls over on the birthday", () => {
+  assert.equal(L.ageOn("2001-09-13", "2026-10-18"), 25);
+  assert.equal(L.ageOn("2001-09-13", "2027-09-12"), 25);
+  assert.equal(L.ageOn("2001-09-13", "2027-09-13"), 26);
+});
+test("target at 25 years old", () => {
+  const t = L.targets(77, 183, 25);
+  assert.equal(t.kcal, 3100);
+  assert.equal(t.tdee, 2780);
+});

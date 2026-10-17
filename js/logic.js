@@ -177,3 +177,10 @@ export function dayTotals(entries) {
   t.kcal = Math.round(t.kcal);
   return t;
 }
+
+// Whole years between a birth date and `today` (both ISO dates).
+export function ageOn(dob, today) {
+  const [by, bm, bd] = dob.split("-").map(Number);
+  const [ty, tm, td] = today.split("-").map(Number);
+  return ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
+}
