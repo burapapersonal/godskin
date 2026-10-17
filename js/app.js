@@ -13,6 +13,7 @@ const state = {
   body: [],       // [{ d, kg }]
   checkins: {},   // date -> { noMorning, lowLibido, ... }
   food: {},       // date -> [{ id, t:"HH:MM", n, qty, unit, kcal, p, c, f }]
+  measures: [],   // [{ d, arm, chest, waist }] in cm
   tab: "train",
   dayIdx: 0,
 };
@@ -28,6 +29,7 @@ async function boot() {
   state.body = await S.get("body", []);
   state.checkins = await S.get("checkins", {});
   state.food = await S.get("food", {});
+  state.measures = await S.get("measures", []);
   if (!state.settings.startDate) {
     state.settings.startDate = L.startForWeek(1, today());
     await S.set("settings", state.settings);
@@ -35,13 +37,17 @@ async function boot() {
   const dow = new Date().getDay();
   state.dayIdx = Math.max(0, DAYS.findIndex((d) => d.dow === dow));
   const hash = location.hash.slice(1);
-  if (["train", "food", "body", "check", "rules", "data"].includes(hash)) state.tab = hash;
+  if (["train", "goals", "food", "body", "check", "rules", "data"].includes(hash)) state.tab = hash;
 
   document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
     state.tab = b.dataset.tab;
     history.replaceState(null, "", "#" + state.tab);
     renderTabs();
   }));
+  window.addEventListener("hashchange", () => {
+    const h = location.hash.slice(1);
+    if (document.getElementById("p-" + h) && h !== state.tab) { state.tab = h; renderTabs(); }
+  });
   S.persist();
   renderAll();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -55,7 +61,7 @@ function renderAll() {
 function renderTabs() {
   document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === state.tab));
   document.querySelectorAll("[data-page]").forEach((p) => (p.hidden = p.dataset.page !== state.tab));
-  ({ train: renderTrain, food: renderFood, body: renderBody, check: renderCheck, data: renderData, rules: () => {} })[state.tab]();
+  ({ train: renderTrain, goals: renderGoals, food: renderFood, body: renderBody, check: renderCheck, data: renderData, rules: () => {} })[state.tab]();
 }
 
 /* ---------------- week strip ---------------- */
@@ -323,6 +329,20 @@ function currentKg() {
   return last ? { kg: last.kg, src: "ชั่งล่าสุด" } : { kg: 77, src: "น้ำหนักตั้งต้น" };
 }
 
+const bulkMode = () => L.BULK[state.settings.bulk] || L.BULK.lean;
+
+// Reasons to step back from Size to Lean. Sexual health outranks speed of gain.
+function bulkGuard() {
+  const out = [];
+  const sh = L.sexHealth(state.checkins, today());
+  if (sh.status === "bad") out.push("check-in 14 วันบอกว่าอารมณ์ทางเพศ/การแข็งตัวตอนเช้าลดลงชัด");
+  else if (sh.status === "watch") out.push("การแข็งตัวตอนเช้าเริ่มลดลง");
+  if (cutOne()) out.push("ฟื้นตัวไม่ทัน 3 วันติด");
+  const w = L.measureRate(state.measures, "waist");
+  if (L.waistTooFast(w)) out.push(`เอวขยาย ${w.per4w} cm ต่อ 4 สัปดาห์ (เกิน 1.5)`);
+  return out;
+}
+
 async function addFood(entry) {
   const d = today();
   state.food[d] = (state.food[d] || []).concat({ id: uid(), ...entry });
@@ -343,12 +363,14 @@ function renderFood() {
   const { kg, src } = currentKg();
   const cm = s.height || 183;
   const age = s.dob ? L.ageOn(s.dob, d) : s.age;
-  const tg = age ? L.targets(kg, cm, age) : null;
+  const mode = bulkMode();
+  const tg = age ? L.targets(kg, cm, age, mode.surplus) : null;
   const entries = state.food[d] || [];
   const tot = L.dayTotals(entries);
   const meals = L.groupMeals(entries);
-  const trend = L.bodyTrend(state.body, d).verdict;
+  const trend = L.bodyTrend(state.body, d, mode.range).verdict;
   const trendTip = { slow: "น้ำหนักขึ้นช้ากว่าเป้า ถ้าเป็นแบบนี้ 2 สัปดาห์ติด เพิ่มอีก 150–200 kcal", fast: "น้ำหนักขึ้นเร็วเกินเป้า ลดลง 150 kcal", ok: "น้ำหนักขึ้นตรงเป้า กินเท่านี้ต่อ" }[trend];
+  const guard = bulkGuard();
 
   // Readiness: the most recent meal decides when lifting is comfortable.
   const lastMeal = meals[meals.length - 1];
@@ -388,9 +410,17 @@ function renderFood() {
         <div class="field">
           <label for="height">สูง</label><input type="number" id="height" min="140" max="220" inputmode="numeric" value="${cm}"><span>cm</span>
         </div>
+        <div class="seg" role="group" aria-label="โหมด bulk">
+          ${Object.entries(L.BULK).map(([k, b]) => `<button id="bulk-${k}" data-bulk="${k}" aria-pressed="${b === mode}">${b.name} +${b.surplus}</button>`).join("")}
+        </div>
+        <p class="note">${mode === L.BULK.size
+          ? `Size: น้ำหนักขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ ตัวใหญ่เร็วกว่า แต่ไขมันขึ้นด้วย แอปเฝ้าเอวและ check-in เรื่องเพศไว้ให้`
+          : `Lean: น้ำหนักขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ ไขมันขึ้นน้อย เหมาะกับช่วง Re-entry`}</p>
+        ${mode === L.BULK.size && week() <= 2 ? `<div class="banner"><b>ยังอยู่ช่วง Re-entry</b> ซ้อมเบาอยู่ ส่วนเกินที่มากขึ้นจะกลายเป็นไขมันมากกว่า แนะนำให้เริ่ม Size ตั้งแต่สัปดาห์ 3</div>` : ""}
+        ${mode === L.BULK.size && guard.length ? `<div class="banner bad"><b>ควรกลับไปโหมด Lean</b> ${guard.join(" · ")}</div>` : ""}
         ${tg ? `<div class="big">${tg.kcal.toLocaleString()} kcal</div>
           <p class="mono">โปรตีน ${tg.p} g · คาร์บ ${tg.c} g · ไขมัน ${tg.f} g</p>
-          <p class="note">ใช้น้ำหนัก ${kg.toFixed(1)} kg (${src}) · ใช้พลังงานต่อวัน ~${tg.tdee.toLocaleString()} kcal + ส่วนเกิน ${L.SURPLUS} kcal สำหรับสร้างกล้าม</p>
+          <p class="note">ใช้น้ำหนัก ${kg.toFixed(1)} kg (${src}) · ใช้พลังงานต่อวัน ~${tg.tdee.toLocaleString()} kcal + ส่วนเกิน ${mode.surplus} kcal สำหรับสร้างกล้าม</p>
           ${trendTip ? `<p class="note">${trendTip}</p>` : ""}`
         : `<p class="note">กรอกวันเกิดเพื่อคำนวณให้ตรงตัว ระหว่างนี้ใช้ช่วง 2,900–3,100 kcal</p>`}
       </div>
@@ -507,17 +537,168 @@ function renderFood() {
     renderFood();
   };
   $("dob").onchange = saveProfile;
+  document.querySelectorAll("[data-bulk]").forEach((b) => b.onclick = async () => {
+    state.settings.bulk = b.dataset.bulk;
+    await S.set("settings", state.settings);
+    renderFood();
+  });
   $("height").onchange = saveProfile;
+}
+
+/* ---------------- goals ---------------- */
+// Lift goals are working weight for 8 clean reps. Machine numbers differ between gyms, so all are editable.
+const GOAL_LIFTS = [
+  { id: "incl_mach", n: "Multi Press · Incline", def: 70 },
+  { id: "flat_db", n: "Flat DB Press (ต่อข้าง)", def: 32 },
+  { id: "lat_pd", n: "Machine Lat Pulldown", def: 75 },
+  { id: "smith_squat", n: "Smith Machine Squat", def: 90 },
+];
+
+function bodyChart(goal) {
+  const t = today();
+  const from = L.addDays(t, -90);
+  const pts = state.body.filter((e) => e.d > from);
+  if (pts.length < 2) return `<p class="note">ชั่งน้ำหนักในแท็บน้ำหนักตัวอย่างน้อย 2 วัน กราฟจะขึ้นตรงนี้</p>`;
+  const W = 360, H = 180, padL = 30, padR = 8, padT = 16, padB = 22;
+  const x0 = Date.parse(pts[0].d), x1 = Math.max(Date.parse(pts[pts.length - 1].d), x0 + 864e5 * 7);
+  const vals = pts.map((e) => e.kg);
+  const lo = Math.floor(Math.min(...vals) - 0.5), hi = Math.ceil(Math.max(goal, ...vals) + 0.5);
+  const X = (d) => padL + ((Date.parse(d) - x0) / (x1 - x0)) * (W - padL - padR);
+  const Y = (v) => padT + (1 - (v - lo) / (hi - lo)) * (H - padT - padB);
+  // 7-day rolling average
+  const avg = pts.map((e) => {
+    const win = pts.filter((q) => q.d > L.addDays(e.d, -7) && q.d <= e.d).map((q) => q.kg);
+    return [X(e.d), Y(win.reduce((a, b) => a + b, 0) / win.length)];
+  });
+  const ticks = [lo, Math.round((lo + hi) / 2), hi];
+  return `<div class="chartbox"><svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="น้ำหนักตัว 90 วันล่าสุด เทียบเป้า ${goal} kg">
+    ${ticks.map((v) => `<line x1="${padL}" x2="${W - padR}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/><text x="${padL - 6}" y="${Y(v) + 4}" text-anchor="end" class="axis">${v}</text>`).join("")}
+    <line x1="${padL}" x2="${W - padR}" y1="${Y(goal)}" y2="${Y(goal)}" class="goal"/>
+    <text x="${W - padR}" y="${Y(goal) - 6}" text-anchor="end" class="goaltxt">เป้า ${goal} kg</text>
+    ${pts.map((e) => `<circle cx="${X(e.d).toFixed(1)}" cy="${Y(e.kg).toFixed(1)}" r="2.5" class="pt"/>`).join("")}
+    <polyline class="avg ln" pathLength="1" points="${avg.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" ")}"/>
+    <text x="${padL}" y="${H - 6}" class="axis">${fmtDate(pts[0].d)}</text>
+    <text x="${W - padR}" y="${H - 6}" text-anchor="end" class="axis">${fmtDate(pts[pts.length - 1].d)}</text>
+  </svg></div>`;
+}
+
+function renderGoals() {
+  const t = today(), s = state.settings;
+  const g = s.goals || {};
+  const goalKg = g.bodyKg || 85;
+  const { kg, src } = currentKg();
+  const slope = L.slopePerWeek(state.body, t);
+  const eta = L.etaWeeks(kg, goalKg, slope);
+  const etaDate = eta ? new Date(Date.now() + eta * 7 * 864e5).toLocaleDateString("th-TH", { month: "short", year: "numeric" }) : null;
+  const sh = L.sexHealth(state.checkins, t);
+  const mode = bulkMode();
+  const guard = bulkGuard();
+  const arm = L.measureRate(state.measures, "arm"), chest = L.measureRate(state.measures, "chest"), waist = L.measureRate(state.measures, "waist");
+  const mToday = state.measures.find((m) => m.d === t) || {};
+  const rate = (r) => (r ? `<span class="mono">${r.per4w >= 0 ? "+" : ""}${r.per4w} cm/4 สัปดาห์</span>` : `<span class="note">ต้องวัดห่างกัน 3 สัปดาห์ขึ้นไป</span>`);
+  const shTag = { good: ["ปกติดี", "up"], watch: ["เริ่มลดลง", "hold"], bad: ["ลดลงชัด", "down"] }[sh.status];
+
+  $("p-goals").innerHTML = `
+    <h2>เป้าหมาย</h2>
+
+    <div class="card sexcard">
+      <h3>สมรรถภาพทางเพศ 14 วัน</h3>
+      ${sh.status
+        ? `<p><span class="tag ${shTag[1]}">${shTag[0]}</span> แข็งตัวตอนเช้า <span class="mono">${sh.logged - sh.noMorning}/${sh.logged}</span> วัน · อารมณ์ลด <span class="mono">${sh.lowLibido}</span> วัน</p>`
+        : `<p class="note">ทำ Check-in ตอนเช้าอีก ${5 - sh.logged} วัน แอปถึงจะสรุปได้ (บันทึกแล้ว ${sh.logged} วัน)</p>`}
+      <p class="note">ตัวนี้มาก่อนเป้าตัวใหญ่ทุกข้อ ถ้าเริ่มลดลง: กลับโหมด Lean, นอนให้ถึง 8 ชม., ตรวจว่ากินถึงเป้าและไขมันไม่ต่ำกว่า 60 g/วัน ไม่ดีขึ้นใน 2 สัปดาห์ ตรวจเลือดดู testosterone ตอนเช้า</p>
+      ${mode === L.BULK.size && guard.length ? `<div class="banner bad"><b>ควรกลับไปโหมด Lean</b> ${guard.join(" · ")}</div>` : ""}
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>น้ำหนักตัวเป้าหมาย</h3>
+        <div class="field"><label for="goalKg">เป้า</label><input type="number" id="goalKg" step="0.5" min="60" max="130" value="${goalKg}"><span>kg</span></div>
+        <div class="big">${kg.toFixed(1)} <span class="unit">/ ${goalKg} kg</span></div>
+        <div class="dp-bar"><i style="width:${Math.max(0, Math.min(100, ((kg - 77) / Math.max(0.1, goalKg - 77)) * 100))}%"></i></div>
+        <p class="note">${src} · เริ่มที่ 77 kg · โหมด ${mode.name}</p>
+        <p>${eta === 0 ? `<span class="tag up">ถึงเป้าแล้ว</span>`
+          : eta ? `ขึ้นอยู่ <span class="mono">${slope >= 0 ? "+" : ""}${slope.toFixed(2)} kg/สัปดาห์</span> → ถึงเป้าในราว <b>${eta} สัปดาห์</b> (${etaDate})`
+          : slope != null ? `น้ำหนักยังไม่ขึ้น <span class="mono">${slope.toFixed(2)} kg/สัปดาห์</span> ต้องกินเพิ่ม`
+          : `ชั่งทุกเช้าให้ครบ 2 สัปดาห์ แอปจะคาดว่าถึงเป้าเมื่อไร`}</p>
+      </div>
+      <div class="card">
+        <h3>กราฟ 90 วัน</h3>
+        ${bodyChart(goalKg)}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>เป้าแรง (น้ำหนัก × 8 ครั้ง)</h3>
+      <p class="note">เทียบด้วย e1RM (แรงสูงสุด 1 ครั้งโดยประมาณ) จากเซ็ตที่ดีที่สุดที่บันทึกไว้ ตัวเลขเริ่มต้นเป็นเป้า 6 เดือน แก้ให้ตรงกับเครื่องที่ยิมได้</p>
+      <div class="lifts">${GOAL_LIFTS.map((x) => {
+        const goal = g.lifts?.[x.id] ?? x.def;
+        const best = L.bestLift(hist(x.id));
+        const tgt = L.goalE1rm(goal);
+        const pct = best ? Math.min(100, (best.e1rm / tgt) * 100) : 0;
+        return `<div class="lift">
+          <div class="macro-h"><b>${esc(x.n)}</b><span class="field"><input type="number" id="lg_${x.id}" data-lift="${x.id}" step="0.5" min="0" value="${goal}" aria-label="เป้า ${esc(x.n)} kg"><span>kg × 8</span></span></div>
+          <div class="dp-bar"><i style="width:${pct}%;${pct >= 100 ? "background:var(--good)" : ""}"></i></div>
+          <span class="note mono">${best ? `ดีสุด ${best.w}×${best.r} (${fmtDate(best.d)}) · ${Math.round(pct)}%` : "ยังไม่มีบันทึก"}</span>
+        </div>`;
+      }).join("")}</div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>วัดรอบตัว</h3>
+        <p class="note">เดือนละครั้ง ตอนเช้าก่อนกิน วัดจุดเดิมทุกครั้ง แขน: เกร็งรอบที่ใหญ่สุด · อก: แนวหัวนม หายใจออกปกติ · เอว: แนวสะดือ ไม่แขม่ว</p>
+        <div class="field"><label for="mArm">แขน</label><input type="number" id="mArm" step="0.1" value="${mToday.arm ?? ""}"><span>cm</span></div>
+        <div class="field"><label for="mChest">อก</label><input type="number" id="mChest" step="0.1" value="${mToday.chest ?? ""}"><span>cm</span></div>
+        <div class="field"><label for="mWaist">เอว</label><input type="number" id="mWaist" step="0.1" value="${mToday.waist ?? ""}"><span>cm</span></div>
+        <div class="row-actions"><button class="btn" id="mSave">บันทึกวันนี้</button><span id="mOk" class="saved"></span></div>
+      </div>
+      <div class="card">
+        <h3>กำลังได้กล้ามหรือไขมัน</h3>
+        <div class="tbl"><table>
+          <tr><th>รอบ</th><th>ล่าสุด</th><th>อัตรา</th></tr>
+          ${[["แขน", "arm", arm], ["อก", "chest", chest], ["เอว", "waist", waist]].map(([n, k, r]) => {
+            const last = state.measures.filter((m) => m[k] > 0).slice(-1)[0];
+            return `<tr><td>${n}</td><td class="num">${last ? last[k] + " cm" : "–"}</td><td>${rate(r)}</td></tr>`;
+          }).join("")}
+        </table></div>
+        <p class="note">แขนกับอกขึ้น เอวขึ้นไม่เกิน 1 cm/เดือน = ได้กล้ามเป็นหลัก ถ้าเอวขึ้นเกิน 1.5 cm/4 สัปดาห์ ไขมันขึ้นเร็วเกิน ซึ่งกดฮอร์โมนเพศชายได้ ให้ลดลงมาโหมด Lean</p>
+      </div>
+    </div>`;
+
+  $("goalKg").onchange = async () => {
+    const v = Number($("goalKg").value);
+    if (v >= 60 && v <= 130) { state.settings.goals = { ...g, bodyKg: v }; await S.set("settings", state.settings); }
+    renderGoals();
+  };
+  document.querySelectorAll("[data-lift]").forEach((inp) => inp.onchange = async () => {
+    const v = Number(inp.value);
+    const lifts = { ...(state.settings.goals?.lifts || {}) };
+    if (v > 0) lifts[inp.dataset.lift] = v; else delete lifts[inp.dataset.lift];
+    state.settings.goals = { ...(state.settings.goals || {}), lifts };
+    await S.set("settings", state.settings);
+    renderGoals();
+  });
+  $("mSave").onclick = async () => {
+    const val = (id) => { const v = Number($(id).value); return v > 0 && v < 250 ? v : undefined; };
+    const m = { d: t, arm: val("mArm"), chest: val("mChest"), waist: val("mWaist") };
+    if (!m.arm && !m.chest && !m.waist) { $("mOk").className = "err"; $("mOk").textContent = "กรอกอย่างน้อย 1 ช่อง"; return; }
+    state.measures = state.measures.filter((x) => x.d !== t).concat(m).sort((a, b) => (a.d < b.d ? -1 : 1));
+    await S.set("measures", state.measures);
+    renderGoals();
+    $("mOk").textContent = "บันทึกแล้ว";
+  };
 }
 
 /* ---------------- body weight ---------------- */
 function renderBody() {
   const t = today();
   const cur = state.body.find((e) => e.d === t);
-  const tr = L.bodyTrend(state.body, t);
+  const mode = bulkMode();
+  const tr = L.bodyTrend(state.body, t, mode.range);
   const verdict = { slow: ["ขึ้นช้ากว่าเป้า", "ถ้าเป็นแบบนี้ 2 สัปดาห์ติด เพิ่มอาหาร 150–200 kcal/วัน", "hold"],
     fast: ["ขึ้นเร็วกว่าเป้า", "อาจเป็นไขมันมากกว่ากล้าม ลดลง 150 kcal/วัน", "down"],
-    ok: ["ตรงเป้า", "ขึ้น 0.2–0.35 kg/สัปดาห์ ทำแบบนี้ต่อ", "up"] }[tr.verdict];
+    ok: ["ตรงเป้า", `ขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ (โหมด ${mode.name}) ทำแบบนี้ต่อ`, "up"] }[tr.verdict];
   const rows = state.body.slice().reverse().slice(0, 14);
   $("p-body").innerHTML = `
     <h2>น้ำหนักตัว</h2>

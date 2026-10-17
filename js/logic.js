@@ -108,7 +108,7 @@ export function needsCut(checkins, today) {
 }
 
 // Body weight: 7-day average ending at `today`, and change versus the 7 days before.
-export function bodyTrend(entries, today) {
+export function bodyTrend(entries, today, range = [0.2, 0.35]) {
   const avg = (from, to) => {
     const xs = entries.filter((e) => e.d > from && e.d <= to).map((e) => e.kg);
     return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
@@ -117,7 +117,7 @@ export function bodyTrend(entries, today) {
   const before = avg(addDays(today, -14), addDays(today, -7));
   const delta = cur != null && before != null ? cur - before : null;
   let verdict = null;
-  if (delta != null) verdict = delta < 0.2 ? "slow" : delta > 0.35 ? "fast" : "ok";
+  if (delta != null) verdict = delta < range[0] ? "slow" : delta > range[1] ? "fast" : "ok";
   return { cur, before, delta, verdict };
 }
 
@@ -132,9 +132,9 @@ export function bmr(kg, cm, age) {
 // activity factor 1.55, +300 kcal surplus, protein 2.0 g/kg, fat 1.0 g/kg, carbs fill the rest.
 export const ACTIVITY = 1.55;
 export const SURPLUS = 300;
-export function targets(kg, cm, age) {
+export function targets(kg, cm, age, surplus = SURPLUS) {
   const tdee = Math.round(bmr(kg, cm, age) * ACTIVITY);
-  const kcal = Math.round((tdee + SURPLUS) / 50) * 50;
+  const kcal = Math.round((tdee + surplus) / 50) * 50;
   const p = Math.round(kg * 2.0);
   const f = Math.round(kg * 1.0);
   const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
@@ -183,4 +183,76 @@ export function ageOn(dob, today) {
   const [by, bm, bd] = dob.split("-").map(Number);
   const [ty, tm, td] = today.split("-").map(Number);
   return ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
+}
+
+/* ---------------- goals ---------------- */
+
+// Bulk modes. Size gains faster but adds more fat, and body fat that climbs too fast
+// lowers testosterone, so Size comes with guard rails (waist + sexual-health check-ins).
+export const BULK = {
+  lean: { name: "Lean", surplus: 300, range: [0.2, 0.35] },
+  size: { name: "Size", surplus: 500, range: [0.35, 0.5] },
+};
+
+// Least-squares body-weight slope in kg/week over the last `days` days.
+export function slopePerWeek(entries, today, days = 28) {
+  const from = addDays(today, -days);
+  const pts = entries.filter((e) => e.d > from && e.d <= today).map((e) => [daysBetween(from, e.d), e.kg]);
+  if (pts.length < 4 || pts[pts.length - 1][0] - pts[0][0] < 10) return null;
+  const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+  const num = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0);
+  const den = pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0);
+  return den ? (num / den) * 7 : null;
+}
+
+// Weeks until `goal` at the current rate; 0 if reached, null if not gaining.
+export function etaWeeks(cur, goal, slope) {
+  if (cur >= goal) return 0;
+  if (slope == null || slope < 0.03) return null;
+  return Math.ceil((goal - cur) / slope - 1e-9);
+}
+
+// Best set by estimated 1RM across an exercise's history.
+export function bestLift(history = []) {
+  let best = null;
+  for (const e of history) e.w.forEach((w, i) => {
+    const r = Number(e.r[i]);
+    if (w > 0 && r > 0) {
+      const v = w * (1 + r / 30);
+      if (!best || v > best.e1rm) best = { e1rm: Math.round(v * 10) / 10, w, r, d: e.d };
+    }
+  });
+  return best;
+}
+export const goalE1rm = (w, reps = 8) => Math.round(w * (1 + reps / 30) * 10) / 10;
+
+// Change in one tape measurement, scaled to cm per 4 weeks, comparing the latest entry with
+// one at least 21 days older.
+export function measureRate(measures, key) {
+  const xs = measures.filter((m) => m[key] > 0).sort((a, b) => (a.d < b.d ? -1 : 1));
+  if (xs.length < 2) return null;
+  const last = xs[xs.length - 1];
+  const older = xs.filter((m) => daysBetween(m.d, last.d) >= 21);
+  if (!older.length) return null;
+  const ref = older[older.length - 1];
+  const days = daysBetween(ref.d, last.d);
+  return { delta: Math.round((last[key] - ref[key]) * 10) / 10, days, per4w: Math.round(((last[key] - ref[key]) / days) * 28 * 10) / 10 };
+}
+// Waist growing more than 1.5 cm per 4 weeks means the surplus is mostly going to fat.
+export const waistTooFast = (m) => !!m && m.per4w > 1.5;
+
+// Sexual-health summary of the last `n` days of check-ins.
+export function sexHealth(checkins, today, n = 14) {
+  let logged = 0, noMorning = 0, lowLibido = 0;
+  for (let i = 0; i < n; i++) {
+    const c = checkins[addDays(today, -i)];
+    if (!c) continue;
+    logged++;
+    if (c.noMorning) noMorning++;
+    if (c.lowLibido) lowLibido++;
+  }
+  if (logged < 5) return { logged, noMorning, lowLibido, status: null };
+  const morningRate = (logged - noMorning) / logged;
+  const status = morningRate >= 0.7 && lowLibido <= 2 ? "good" : morningRate >= 0.5 && lowLibido <= 4 ? "watch" : "bad";
+  return { logged, noMorning, lowLibido, morningRate, status };
 }

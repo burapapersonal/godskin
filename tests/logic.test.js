@@ -91,3 +91,33 @@ test("target at 25 years old", () => {
   assert.equal(t.kcal, 3100);
   assert.equal(t.tdee, 2780);
 });
+
+test("Size mode adds 200 kcal over Lean", () => {
+  assert.equal(L.targets(77, 183, 25, L.BULK.size.surplus).kcal - L.targets(77, 183, 25, L.BULK.lean.surplus).kcal, 200);
+});
+test("weight slope and ETA", () => {
+  const e = []; for (let i = 0; i < 28; i += 2) e.push({ d: L.addDays("2026-10-01", i), kg: 77 + (i / 7) * 0.4 });
+  const s = L.slopePerWeek(e, "2026-10-28");
+  assert.ok(Math.abs(s - 0.4) < 0.01);
+  assert.equal(L.etaWeeks(78.6, 85, 0.4), 16);
+  assert.equal(L.etaWeeks(86, 85, s), 0);
+  assert.equal(L.etaWeeks(78, 85, 0), null);
+});
+test("best lift by e1RM", () => {
+  const b = L.bestLift([{ d: "a", w: [60, 70], r: [10, 3] }, { d: "b", w: [62.5], r: [9] }]);
+  assert.equal(b.w, 62.5);
+});
+test("waist rate per 4 weeks and guard", () => {
+  const m = [{ d: "2026-10-01", waist: 80 }, { d: "2026-10-29", waist: 82 }];
+  const r = L.measureRate(m, "waist");
+  assert.equal(r.per4w, 2);
+  assert.equal(L.waistTooFast(r), true);
+  assert.equal(L.measureRate([{ d: "2026-10-01", waist: 80 }, { d: "2026-10-10", waist: 81 }], "waist"), null);
+});
+test("sexual health summary", () => {
+  const c = {}; for (let i = 0; i < 10; i++) c[L.addDays("2026-10-20", -i)] = { noMorning: i < 2 };
+  assert.equal(L.sexHealth(c, "2026-10-20").status, "good");
+  for (let i = 0; i < 10; i++) c[L.addDays("2026-10-20", -i)] = { noMorning: i < 6, lowLibido: i < 5 };
+  assert.equal(L.sexHealth(c, "2026-10-20").status, "bad");
+  assert.equal(L.sexHealth({}, "2026-10-20").status, null);
+});

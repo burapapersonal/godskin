@@ -149,6 +149,26 @@ section.page > h2{font-size:32px;text-transform:uppercase;font-weight:800}
 .chipbtn{border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
 .chipbtn:active{transform:scale(.96)}
 
+/* ---------- goals ---------- */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;width:max-content;max-width:100%}
+.seg button{border:0;background:var(--sunk);padding:7px 14px;cursor:pointer;font-family:var(--f-display);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.big .unit{font-size:16px;color:var(--muted);font-weight:500}
+.sexcard{border-color:var(--p-red)}
+.sexcard h3{color:var(--p-red)}
+.lifts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.lift{display:grid;gap:6px;min-width:0}
+.lift .field input{width:80px}
+.chartbox{overflow-x:auto}
+.chart{width:100%;min-width:280px;height:auto;display:block}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .axis{fill:var(--muted);font-family:var(--f-mono);font-size:12px}
+.chart .goal{stroke:var(--good);stroke-width:1.5;stroke-dasharray:6 5}
+.chart .goaltxt{fill:var(--good);font-family:var(--f-mono);font-size:12px;font-weight:700}
+.chart .pt{fill:var(--muted);opacity:.55}
+.chart .avg{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;animation:draw 1s ease-out both}
+
 /* ---------- motion ----------
    Every animation starts from the element's resting style, so with reduced motion
    (animation:none) everything is still fully visible. */
