@@ -120,3 +120,60 @@ export function bodyTrend(entries, today) {
   if (delta != null) verdict = delta < 0.2 ? "slow" : delta > 0.35 ? "fast" : "ok";
   return { cur, before, delta, verdict };
 }
+
+/* ---------------- nutrition ---------------- */
+
+// Mifflin-St Jeor BMR (male).
+export function bmr(kg, cm, age) {
+  return 10 * kg + 6.25 * cm - 5 * age + 5;
+}
+
+// Daily targets for a lean bulk on this 6-day program:
+// activity factor 1.55, +300 kcal surplus, protein 2.0 g/kg, fat 1.0 g/kg, carbs fill the rest.
+export const ACTIVITY = 1.55;
+export const SURPLUS = 300;
+export function targets(kg, cm, age) {
+  const tdee = Math.round(bmr(kg, cm, age) * ACTIVITY);
+  const kcal = Math.round((tdee + SURPLUS) / 50) * 50;
+  const p = Math.round(kg * 2.0);
+  const f = Math.round(kg * 1.0);
+  const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
+  return { tdee, kcal, p, c, f };
+}
+
+const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+export const fromMin = (x) => {
+  const m = ((Math.round(x) % 1440) + 1440) % 1440;
+  return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+};
+
+// Entries eaten within 45 minutes of each other count as one meal.
+export function groupMeals(entries) {
+  const sorted = entries.slice().sort((a, b) => toMin(a.t) - toMin(b.t));
+  const meals = [];
+  for (const e of sorted) {
+    const last = meals[meals.length - 1];
+    if (last && toMin(e.t) - last.end <= 45) { last.items.push(e); last.end = toMin(e.t); }
+    else meals.push({ start: toMin(e.t), end: toMin(e.t), items: [e] });
+  }
+  return meals.map((m) => {
+    const sum = (k) => Math.round(m.items.reduce((a, e) => a + e[k], 0) * 10) / 10;
+    return { t: fromMin(m.start), start: m.start, items: m.items, kcal: Math.round(sum("kcal")), p: sum("p"), c: sum("c"), f: sum("f") };
+  });
+}
+
+// Minutes to wait after a meal before hard lifting. Big or fatty meals empty from the stomach slowly.
+export function digestWait(meal) {
+  if (meal.kcal >= 700 || meal.f >= 25) return 180;
+  if (meal.kcal >= 400 || meal.f >= 15) return 120;
+  if (meal.kcal >= 150) return 60;
+  return 30;
+}
+
+export function dayTotals(entries) {
+  const t = { kcal: 0, p: 0, c: 0, f: 0 };
+  for (const e of entries) for (const k in t) t[k] += e[k];
+  for (const k in t) t[k] = Math.round(t[k] * 10) / 10;
+  t.kcal = Math.round(t.kcal);
+  return t;
+}

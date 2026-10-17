@@ -1,6 +1,7 @@
 import { PHASES, DAYS } from "./program.js";
 import * as L from "./logic.js";
 import * as S from "./store.js";
+import { FOODS, foodById, portion } from "./foods.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -11,6 +12,7 @@ const state = {
   settings: {},   // { startDate, lastExport }
   body: [],       // [{ d, kg }]
   checkins: {},   // date -> { noMorning, lowLibido, ... }
+  food: {},       // date -> [{ id, t:"HH:MM", n, qty, unit, kcal, p, c, f }]
   tab: "train",
   dayIdx: 0,
 };
@@ -25,6 +27,7 @@ async function boot() {
   state.settings = await S.get("settings", {});
   state.body = await S.get("body", []);
   state.checkins = await S.get("checkins", {});
+  state.food = await S.get("food", {});
   if (!state.settings.startDate) {
     state.settings.startDate = L.startForWeek(1, today());
     await S.set("settings", state.settings);
@@ -32,7 +35,7 @@ async function boot() {
   const dow = new Date().getDay();
   state.dayIdx = Math.max(0, DAYS.findIndex((d) => d.dow === dow));
   const hash = location.hash.slice(1);
-  if (["train", "body", "check", "rules", "data"].includes(hash)) state.tab = hash;
+  if (["train", "food", "body", "check", "rules", "data"].includes(hash)) state.tab = hash;
 
   document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
     state.tab = b.dataset.tab;
@@ -52,7 +55,7 @@ function renderAll() {
 function renderTabs() {
   document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === state.tab));
   document.querySelectorAll("[data-page]").forEach((p) => (p.hidden = p.dataset.page !== state.tab));
-  ({ train: renderTrain, body: renderBody, check: renderCheck, data: renderData, rules: () => {} })[state.tab]();
+  ({ train: renderTrain, food: renderFood, body: renderBody, check: renderCheck, data: renderData, rules: () => {} })[state.tab]();
 }
 
 /* ---------------- week strip ---------------- */
@@ -307,6 +310,200 @@ $("timerPlus").onclick = () => {
   timerEnd += 30000; timerTotal += 30000; tickTimer();
 };
 $("timerStop").onclick = () => { clearInterval(timerTick); $("timer").hidden = true; };
+
+/* ---------------- food ---------------- */
+const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+// Body weight used for targets: 7-day average, else latest entry, else the starting 77 kg.
+function currentKg() {
+  const tr = L.bodyTrend(state.body, today());
+  if (tr.cur != null) return { kg: tr.cur, src: "ค่าเฉลี่ย 7 วัน" };
+  const last = state.body[state.body.length - 1];
+  return last ? { kg: last.kg, src: "ชั่งล่าสุด" } : { kg: 77, src: "น้ำหนักตั้งต้น" };
+}
+
+async function addFood(entry) {
+  const d = today();
+  state.food[d] = (state.food[d] || []).concat({ id: uid(), ...entry });
+  await S.set("food", state.food);
+  renderFood();
+}
+
+function bar(label, have, goal, unit) {
+  const pct = goal ? Math.min(100, (have / goal) * 100) : 0;
+  const over = goal && have > goal * 1.1;
+  return `<div class="macro"><div class="macro-h"><span class="label">${label}</span>
+    <span class="mono">${Math.round(have)} / ${goal} ${unit}</span></div>
+    <div class="dp-bar"><i style="width:${pct}%;${over ? "background:var(--warn)" : ""}"></i></div></div>`;
+}
+
+function renderFood() {
+  const d = today(), s = state.settings;
+  const { kg, src } = currentKg();
+  const cm = s.height || 183;
+  const tg = s.age ? L.targets(kg, cm, s.age) : null;
+  const entries = state.food[d] || [];
+  const tot = L.dayTotals(entries);
+  const meals = L.groupMeals(entries);
+  const trend = L.bodyTrend(state.body, d).verdict;
+  const trendTip = { slow: "น้ำหนักขึ้นช้ากว่าเป้า ถ้าเป็นแบบนี้ 2 สัปดาห์ติด เพิ่มอีก 150–200 kcal", fast: "น้ำหนักขึ้นเร็วเกินเป้า ลดลง 150 kcal", ok: "น้ำหนักขึ้นตรงเป้า กินเท่านี้ต่อ" }[trend];
+
+  // Readiness: the most recent meal decides when lifting is comfortable.
+  const lastMeal = meals[meals.length - 1];
+  const dayName = DAYS.find((x) => x.dow === new Date().getDay());
+  let ready = `<p class="note">ยังไม่ได้บันทึกมื้อวันนี้ บันทึกมื้อล่าสุดแล้วแอปจะบอกว่าซ้อมได้ตั้งแต่กี่โมง</p>`;
+  if (lastMeal) {
+    const wait = L.digestWait(lastMeal);
+    const readyAt = lastMeal.start + wait;
+    const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+    const planned = lastMeal.start > nowM; // logged with a time later than now
+    const leftM = planned ? 0 : readyAt - nowM;
+    const status = planned ? `<span class="tag">มื้อที่วางแผนไว้</span> ซ้อมได้หลัง ${L.fromMin(readyAt)}`
+      : `<span class="tag ${leftM > 0 ? "hold" : "up"}">${leftM > 0 ? "ยังไม่พร้อม" : "พร้อมซ้อม"}</span>` +
+        (leftM > 0 ? ` อีก ${Math.floor(leftM / 60) ? Math.floor(leftM / 60) + " ชม. " : ""}${leftM % 60} นาที` : "");
+    ready = `<div class="big">${L.fromMin(readyAt)}</div>
+      <p>มื้อล่าสุด ${lastMeal.t} · <span class="mono">${lastMeal.kcal} kcal · ไขมัน ${Math.round(lastMeal.f)} g</span> → รอ <b>${wait >= 60 ? wait / 60 + " ชม." : wait + " นาที"}</b></p>
+      <p>${status}</p>
+      ${lastMeal.f >= 25 ? `<p class="note">มื้อนี้ไขมันสูง ย่อยช้า ถ้าจะกินก่อนซ้อมครั้งหน้า ลดไข่เจียวหรือน้ำมัน แล้วเพิ่มข้าวแทน</p>` : ""}`;
+  }
+
+  const recent = [];
+  const seen = new Set();
+  Object.keys(state.food).sort().reverse().forEach((day) => (state.food[day] || []).slice().reverse().forEach((e) => {
+    const key = e.n + "|" + e.qty;
+    if (!seen.has(key) && recent.length < 8) { seen.add(key); recent.push(e); }
+  }));
+
+  $("p-food").innerHTML = `
+    <h2>อาหาร</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>เป้าต่อวัน</h3>
+        <div class="field">
+          <label for="age">อายุ</label><input type="number" id="age" min="15" max="80" inputmode="numeric" value="${s.age ?? ""}" placeholder="ปี">
+          <label for="height">สูง</label><input type="number" id="height" min="140" max="220" inputmode="numeric" value="${cm}"><span>cm</span>
+        </div>
+        ${tg ? `<div class="big">${tg.kcal.toLocaleString()} kcal</div>
+          <p class="mono">โปรตีน ${tg.p} g · คาร์บ ${tg.c} g · ไขมัน ${tg.f} g</p>
+          <p class="note">ใช้น้ำหนัก ${kg.toFixed(1)} kg (${src}) · ใช้พลังงานต่อวัน ~${tg.tdee.toLocaleString()} kcal + ส่วนเกิน ${L.SURPLUS} kcal สำหรับสร้างกล้าม</p>
+          ${trendTip ? `<p class="note">${trendTip}</p>` : ""}`
+        : `<p class="note">กรอกอายุเพื่อคำนวณให้ตรงตัว ระหว่างนี้ใช้ช่วง 2,900–3,100 kcal</p>`}
+      </div>
+      <div class="card">
+        <h3>พร้อมซ้อมเมื่อไร</h3>
+        ${dayName?.ex.length ? `<p class="note">วันนี้: ${esc(dayName.title)}</p>` : ""}
+        ${ready}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>วันนี้กินไปแล้ว</h3>
+      <div class="macros">
+        ${bar("พลังงาน", tot.kcal, tg?.kcal ?? 3000, "kcal")}
+        ${bar("โปรตีน", tot.p, tg?.p ?? 154, "g")}
+        ${bar("คาร์บ", tot.c, tg?.c ?? 400, "g")}
+        ${bar("ไขมัน", tot.f, tg?.f ?? 77, "g")}
+      </div>
+      ${meals.length ? meals.map((m) => `<div class="meal"><div class="meal-h"><b class="mono">${m.t}</b><span class="mono">${m.kcal} kcal · P${Math.round(m.p)} C${Math.round(m.c)} F${Math.round(m.f)}</span></div>
+        ${m.items.map((e) => `<div class="fitem"><span>${esc(e.n)} <span class="mono">${e.qty} ${esc(e.unit)}</span></span><span class="mono">${e.kcal}</span>
+          <button class="x" data-del="${e.id}" aria-label="ลบ ${esc(e.n)}">×</button></div>`).join("")}</div>`).join("")
+        : `<p class="note">ยังไม่มีรายการ เพิ่มอาหารด้านล่าง</p>`}
+    </div>
+
+    <div class="card">
+      <h3>เพิ่มอาหาร</h3>
+      <div class="field">
+        <select id="fsel" aria-label="อาหาร">${FOODS.map((f) => `<option value="${f.id}">${esc(f.n)}</option>`).join("")}</select>
+      </div>
+      <div class="field">
+        <input type="number" id="fqty" min="0" step="any" inputmode="decimal" aria-label="ปริมาณ"><span id="funit"></span>
+        <input type="time" id="ftime" value="${nowHM()}" aria-label="เวลาที่กิน">
+        <button class="btn" id="fadd">เพิ่ม</button>
+      </div>
+      <p class="note mono" id="fprev"></p>
+      ${recent.length ? `<div><span class="label">กินบ่อย แตะเพื่อเพิ่มตอนนี้</span><div class="chips">${recent.map((e, i) => `<button class="chipbtn" data-recent="${i}">${esc(e.n)} ${e.qty} ${esc(e.unit)}</button>`).join("")}</div></div>` : ""}
+      <details class="hist"><summary>อาหารที่ไม่มีในรายการ</summary>
+        <div class="field" style="margin-top:8px">
+          <input id="cn" placeholder="ชื่ออาหาร" aria-label="ชื่ออาหาร" style="width:100%">
+          <input type="number" id="ck" placeholder="kcal" aria-label="kcal">
+          <input type="number" id="cp" placeholder="โปรตีน g" aria-label="โปรตีน g">
+          <input type="number" id="cc" placeholder="คาร์บ g" aria-label="คาร์บ g">
+          <input type="number" id="cf" placeholder="ไขมัน g" aria-label="ไขมัน g">
+          <button class="btn ghost" id="cadd">เพิ่ม</button><span id="cerr" class="err"></span>
+        </div>
+      </details>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>กินก่อนซ้อมยังไง</h3>
+        <div class="tbl"><table>
+          <tr><th>ก่อนซ้อม</th><th>กินอะไร</th></tr>
+          <tr><td>2.5–3 ชม.</td><td>มื้อเต็ม 600–800 kcal: ข้าว 250 g + หมู/ไก่ 150–200 g</td></tr>
+          <tr><td>1.5–2 ชม.</td><td>มื้อเล็ก 400–500 kcal: ข้าว 150–200 g + ไข่ต้ม 2–3 ฟอง</td></tr>
+          <tr><td>30–60 นาที</td><td>คาร์บย่อยง่าย: กล้วย 1–2 ลูก หรือขนมปัง 2 แผ่น</td></tr>
+        </table></div>
+        <p class="note">ก่อนซ้อมเน้นคาร์บ 60–100 g กับโปรตีน 25–40 g ไขมันและผักไม่ต้องเยอะ เพราะทำให้ย่อยช้าและจุกตอนเล่นขา</p>
+        <p class="note">คาเฟอีน 150–250 mg (กาแฟดำ 1–2 แก้ว) 30–60 นาทีก่อนซ้อม ช่วยให้ยกได้ดีขึ้นจริง ถ้าซ้อมเย็นหลัง 4 โมง ข้ามไป เพราะจะกวนการนอน Pre-workout แบบผงส่วนใหญ่ก็คือคาเฟอีนราคาแพง</p>
+      </div>
+      <div class="card">
+        <h3>หลังซ้อม และทั้งวัน</h3>
+        <ul>
+          <li>หลังซ้อมภายใน 1–2 ชม.: ข้าวเยอะ + โปรตีน 35–40 g</li>
+          <li>แบ่งโปรตีนเป็น 4 มื้อ มื้อละ 35–45 g ดีกว่าอัดมื้อเดียว</li>
+          <li>หมูลีน 500–600 g (ดิบ) ได้โปรตีน 105–130 g แต่ไขมันน้อย ระวังไขมันรวมต่ำกว่า 60 g ซึ่งไม่ดีต่อฮอร์โมน</li>
+          <li>ไข่ทั้งฟองวันละ 3–6 ฟองได้ ให้ทั้งโปรตีน ไขมัน และสังกะสี แต่วางไว้มื้อที่ไม่ใช่ก่อนซ้อม</li>
+          <li>มาม่า โซเดียมราว 1,500 mg ต่อซอง ไม่เกินวันละ 1 ซอง</li>
+          <li>Creatine monohydrate 3–5 g ทุกวัน เวลาไหนก็ได้ นอน 7.5–9 ชม.</li>
+        </ul>
+      </div>
+    </div>`;
+
+  const fsel = $("fsel"), fqty = $("fqty");
+  const syncFood = (resetQty) => {
+    const f = foodById(fsel.value);
+    if (resetQty) fqty.value = f.def;
+    $("funit").textContent = f.unit;
+    const q = Number(fqty.value) || 0;
+    const v = portion(f, q);
+    $("fprev").textContent = `${v.kcal} kcal · โปรตีน ${v.p} g · คาร์บ ${v.c} g · ไขมัน ${v.f} g`;
+  };
+  if (s.lastFood && foodById(s.lastFood)) fsel.value = s.lastFood;
+  syncFood(true);
+  fsel.onchange = () => syncFood(true);
+  fqty.oninput = () => syncFood(false);
+  $("fadd").onclick = async () => {
+    const f = foodById(fsel.value), q = Number(fqty.value);
+    if (!q || q <= 0) { $("fprev").textContent = "กรอกปริมาณมากกว่า 0"; return; }
+    state.settings.lastFood = f.id;
+    await S.set("settings", state.settings);
+    await addFood({ t: $("ftime").value || nowHM(), n: f.n, qty: q, unit: f.unit, fid: f.id, ...portion(f, q) });
+  };
+  document.querySelectorAll("[data-recent]").forEach((b) => b.onclick = () => {
+    const e = recent[+b.dataset.recent];
+    addFood({ t: nowHM(), n: e.n, qty: e.qty, unit: e.unit, fid: e.fid, kcal: e.kcal, p: e.p, c: e.c, f: e.f });
+  });
+  document.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => {
+    state.food[d] = (state.food[d] || []).filter((e) => e.id !== b.dataset.del);
+    await S.set("food", state.food);
+    renderFood();
+  });
+  $("cadd").onclick = () => {
+    const n = $("cn").value.trim(), k = Number($("ck").value);
+    if (!n || !k) { $("cerr").textContent = "ใส่ชื่อและ kcal อย่างน้อย"; return; }
+    addFood({ t: nowHM(), n, qty: 1, unit: "ที่", kcal: Math.round(k), p: Number($("cp").value) || 0, c: Number($("cc").value) || 0, f: Number($("cf").value) || 0 });
+  };
+  const saveProfile = async () => {
+    const age = Number($("age").value), h = Number($("height").value);
+    state.settings.age = age >= 15 && age <= 80 ? age : undefined;
+    state.settings.height = h >= 140 && h <= 220 ? h : 183;
+    await S.set("settings", state.settings);
+    renderFood();
+  };
+  $("age").onchange = saveProfile;
+  $("height").onchange = saveProfile;
+}
 
 /* ---------------- body weight ---------------- */
 function renderBody() {

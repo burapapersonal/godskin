@@ -59,3 +59,24 @@ test("every session fits in 90 minutes", async () => {
   const { DAYS } = await import("../js/program.js");
   for (let w = 1; w <= 8; w++) for (const d of DAYS) assert.ok(L.minutes(d, PHASES[w]) <= 90, `${d.title} week ${w}`);
 });
+
+test("calorie target for 77 kg, 183 cm, age 28 lands near 3,050", () => {
+  const t = L.targets(77, 183, 28);
+  assert.equal(t.kcal, 3050);
+  assert.equal(t.p, 154);
+  assert.equal(t.f, 77);
+  assert.ok(Math.abs(t.p * 4 + t.c * 4 + t.f * 9 - t.kcal) < 10);
+});
+test("rice 150 g + 6-egg omelette needs a 3-hour wait", async () => {
+  const { FOODS, portion } = await import("../js/foods.js");
+  const rice = portion(FOODS.find((f) => f.id === "rice"), 150);
+  const om = portion(FOODS.find((f) => f.id === "omelette"), 6);
+  const meals = L.groupMeals([{ t: "12:00", ...rice }, { t: "12:05", ...om }]);
+  assert.equal(meals.length, 1);
+  assert.equal(L.digestWait(meals[0]), 180);
+  assert.equal(L.digestWait({ kcal: 105, f: 0.4 }), 30);
+});
+test("entries far apart are separate meals", () => {
+  const e = (t) => ({ t, kcal: 100, p: 1, c: 1, f: 1 });
+  assert.equal(L.groupMeals([e("08:00"), e("08:30"), e("12:00")]).length, 2);
+});

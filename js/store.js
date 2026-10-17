@@ -48,7 +48,7 @@ export async function persist() {
   try { return navigator.storage?.persist ? await navigator.storage.persist() : false; } catch { return false; }
 }
 
-export const KEYS = ["logs", "settings", "body", "checkins"];
+export const KEYS = ["logs", "settings", "body", "checkins", "food"];
 
 export async function exportAll() {
   const out = { app: "godskin", version: 1, exportedAt: new Date().toISOString() };
@@ -67,7 +67,15 @@ export function mergeData(cur, inc) {
   }
   const bodyMap = new Map((cur.body || []).map((e) => [e.d, e]));
   for (const e of inc.body || []) bodyMap.set(e.d, e);
+  // food: per date, union of entries by id
+  const food = structuredClone(cur.food || {});
+  for (const [d, list] of Object.entries(inc.food || {})) {
+    const byId = new Map((food[d] || []).map((e) => [e.id, e]));
+    for (const e of list) byId.set(e.id, e);
+    food[d] = [...byId.values()];
+  }
   return {
+    food,
     logs,
     settings: { ...(cur.settings || {}), ...(inc.settings || {}) },
     body: [...bodyMap.values()].sort((a, b) => (a.d < b.d ? -1 : 1)),
