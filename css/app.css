@@ -126,7 +126,12 @@ section.page > h2{font-size:32px;text-transform:uppercase;font-weight:800}
 
 .timer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--ink);color:var(--bg);
   padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-.timer .in{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.timer .in{max-width:980px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.timer .ring{flex:none}
+@media (max-width:380px){.timer .what{display:none}}
+/* while the rest timer shows, keep content and focused inputs clear of it */
+body.timing{padding-bottom:calc(var(--timer-h,84px) + 24px)}
+html{scroll-padding-bottom:var(--timer-h,0px)}
 .timer .t{font-family:var(--f-mono);font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
 .timer .what{flex:1;min-width:0;font-size:13px;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .timer button{border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:var(--f-display);font-weight:700;text-transform:uppercase}
@@ -269,3 +274,18 @@ details[open] .spark .end{animation:popin .3s .75s both}
 .cmpline{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .cmpline b{grid-column:1/-1}
 .myfoods .fitem{padding:4px 0}
+/* exercise animation */
+details.move summary{cursor:pointer;font-size:13px;color:var(--muted);width:max-content}
+details.move[open] summary{color:var(--ink)}
+svg.mv{display:block;width:100%;max-width:300px;margin:6px auto 0;background:var(--sunk);border-radius:var(--r)}
+.mv line{stroke-linecap:round;stroke-linejoin:round}
+.mv .mv-g{stroke:var(--line);stroke-width:2}
+.mv .mv-p{stroke:var(--muted);stroke-width:3}
+.mv-ghost line,.mv-ghost circle{stroke:var(--muted);opacity:.35;stroke-width:3;fill:none}
+.mv-fig .mv-b{stroke:var(--accent);stroke-width:4}
+.mv-fig .mv-f{stroke:var(--accent);stroke-width:4;opacity:.55}
+.mv-fig .mv-h{stroke:var(--accent);stroke-width:3;fill:var(--sunk)}
+.mv-fig .mv-w{stroke:var(--ink);stroke-width:3;fill:var(--ink)}
+.mv-fig .mv-c,.mv-ghost .mv-c{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4}
+.mv-fig .mv-p{stroke:var(--muted);stroke-width:2}
+.yt{display:inline-block;margin-top:6px;font-size:13px;color:var(--accent)}

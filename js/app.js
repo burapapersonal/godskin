@@ -2,6 +2,7 @@ import { PHASES, DAYS, SWAPS, altFor, altName } from "./program.js";
 import * as L from "./logic.js";
 import * as S from "./store.js";
 import { FOODS, foodById as builtinFood, portion } from "./foods.js";
+import { MOVE_OF, mountMove } from "./moves.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -124,6 +125,8 @@ function renderDays() {
 }
 
 function hist(id) { return state.logs[id]?.history || []; }
+// "Superset: A + B" searches for the first movement; "·" variants read better as plain words.
+const ytQuery = (n) => n.replace(/^Superset:\s*/, "").split(" + ")[0].replace(/[·()]/g, " ").replace(/\s+/g, " ").trim() + " proper form";
 // The day's exercises with the user's swaps applied.
 const swaps = () => state.settings.swaps || {};
 const dayEx = (d) => d.ex.map((e) => altFor(e, swaps()[e.id]));
@@ -175,7 +178,11 @@ function renderDay() {
       (ex.swappedFrom ? `<p class="setup"><span class="label">ท่าแทน</span> ใช้แทน ${esc(base.n)} ประวัติแยกตามท่า</p>` : "") + `
       <div class="rx"><span>${unit}</span>${rest}${ex.time ? "" : `<span>RIR ${p.rir}</span>`}</div>
       <p class="note">${esc(ex.note)}</p>` +
-      (ex.setup ? `<p class="setup"><span class="label">ตั้งเครื่อง</span> ${esc(ex.setup)}</p>` : "");
+      (ex.setup ? `<p class="setup"><span class="label">ตั้งเครื่อง</span> ${esc(ex.setup)}</p>` : "") +
+      (ex.log !== false ? `<details class="move"><summary>ดูท่า</summary>` +
+        (MOVE_OF[ex.id] ? `<svg class="mv" data-move="${ex.id}" role="img" aria-label="ภาพเคลื่อนไหวท่า ${esc(ex.n)}"></svg>
+          <p class="note">ภาพคร่าวๆ ให้เห็นทางเดินของท่า สีเทาคือท่าเริ่ม ขึ้นเร็ว 1 วินาที ลงช้า 1.5 วินาที รายละเอียดฟอร์มดูจากคลิปจริง</p>` : "") +
+        `<a class="yt" href="https://www.youtube.com/results?search_query=${encodeURIComponent(ytQuery(ex.n))}" target="_blank" rel="noopener">ดูคลิปจริงบน YouTube ↗</a></details>` : "");
     if (ex.log !== false) {
       html += `<div class="sugg"><span class="tag ${sg.kind}">${esc(sg.tag)}</span><span>${esc(sg.text)}</span>` +
         (last ? `<span class="last mono">ครั้งก่อน ${fmtDate(last.d)}: ${last.w.map((w, k) => w + "×" + last.r[k]).join(", ")}</span>` : "") + `</div>`;
@@ -206,6 +213,10 @@ function renderDay() {
     });
   });
   v.querySelectorAll("[data-rest]").forEach((b) => b.addEventListener("click", () => startRest(b.dataset.rest)));
+  v.querySelectorAll("details.move").forEach((dt) => dt.addEventListener("toggle", () => {
+    const svg = dt.querySelector("svg[data-move]");
+    if (dt.open && svg) mountMove(svg, svg.dataset.move);
+  }));
   v.querySelectorAll("[data-swapopen]").forEach((b) => b.addEventListener("click", () => {
     const box = $("sw_" + b.dataset.swapopen);
     box.hidden = !box.hidden;
@@ -319,6 +330,7 @@ function startRest(id) {
   $("timerWhat").textContent = "พัก · " + ex.n;
   $("timer").hidden = false;
   $("timer").classList.remove("done", "urgent");
+  timerPad(true);
   clearInterval(timerTick);
   timerTick = setInterval(tickTimer, 250);
   tickTimer();
@@ -345,7 +357,14 @@ $("timerPlus").onclick = () => {
   }
   timerEnd += 30000; timerTotal += 30000; tickTimer();
 };
-$("timerStop").onclick = () => { clearInterval(timerTick); $("timer").hidden = true; };
+$("timerStop").onclick = () => { clearInterval(timerTick); $("timer").hidden = true; timerPad(false); };
+// Reserve room under the page for the fixed timer bar so it never covers the last buttons.
+function timerPad(on) {
+  document.body.classList.toggle("timing", on);
+  document.documentElement.style.setProperty("--timer-h", on ? $("timer").offsetHeight + "px" : "0px");
+  const el = document.activeElement;
+  if (on && el && el.getBoundingClientRect().bottom > innerHeight - $("timer").offsetHeight) el.scrollIntoView({ block: "center" });
+}
 
 /* ---------------- food ---------------- */
 const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };

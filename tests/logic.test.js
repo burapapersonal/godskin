@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as L from "../js/logic.js";
 import { PHASES, DAYS, SWAPS, altFor } from "../js/program.js";
+import { MOVES, MOVE_OF, frame, phaseAt } from "../js/moves.js";
 
 const ex = { id: "x", s: 3, lo: 6, hi: 10, rest: 120, inc: 2.5 };
 const T = "2026-10-20";
@@ -185,4 +186,21 @@ test("mergeData unions my foods by id and sex log by date", async () => {
     { myfoods: [{ id: "a", n: "A2" }, { id: "b", n: "B" }], sex: { "2026-10-02": { erect: 4, stamina: 4 } } });
   assert.deepEqual(m.myfoods.map((f) => f.n), ["A2", "B"]);
   assert.equal(Object.keys(m.sex).length, 2);
+});
+
+test("every loggable exercise and swap has an animation that draws finite lines", () => {
+  const ids = new Set();
+  for (const d of DAYS) for (const e of d.ex) { if (e.log !== false) ids.add(e.id); for (const a of SWAPS[e.id] || []) ids.add(a); }
+  for (const id of ids) {
+    const [name, grip] = MOVE_OF[id] || [];
+    assert.ok(MOVES[name], `${id} has no animation`);
+    for (const t of [0, 0.5, 1]) {
+      const { segs, dots } = frame(MOVES[name], t, grip);
+      assert.ok(segs.length >= 6, id);
+      for (const v of segs.flat().concat(dots.flat())) if (typeof v === "number") assert.ok(Number.isFinite(v), `${id} t=${t}`);
+    }
+  }
+  assert.equal(phaseAt(0), 0);
+  assert.equal(phaseAt(1150), 1);
+  assert.equal(phaseAt(3000), 0);
 });
