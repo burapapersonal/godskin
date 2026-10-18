@@ -19,6 +19,7 @@ export const FOODS = [
   { id: "banana", n: "กล้วยหอม", unit: "ลูก", per: 1, def: 1, k: 105, p: 1.3, c: 27, f: 0.4 },
   { id: "oats", n: "ข้าวโอ๊ต (แห้ง)", unit: "g", per: 100, def: 50, k: 380, p: 13, c: 66, f: 7 },
   { id: "bread", n: "ขนมปังขาว", unit: "แผ่น", per: 1, def: 2, k: 75, p: 2.5, c: 14, f: 1 },
+  { id: "mission_wrap", n: "แป้งแรป Mission Original (แผ่นใหญ่ ~60 g)", unit: "แผ่น", per: 1, def: 2, k: 180, p: 4.6, c: 30.5, f: 4 },
   { id: "sweet_potato", n: "มันหวาน (ต้ม)", unit: "g", per: 100, def: 150, k: 86, p: 1.6, c: 20, f: 0.1 },
   { id: "milk", n: "นมจืด 200 ml", unit: "กล่อง", per: 1, def: 1, k: 130, p: 6.4, c: 9.6, f: 7.4 },
   { id: "greek_cheesebaron", n: "กรีกโยเกิร์ต The Cheese Baron รสธรรมชาติ", unit: "g", per: 100, def: 100, k: 160, p: 9, c: 5, f: 11 },
