@@ -21,6 +21,7 @@ export const FOODS = [
   { id: "bread", n: "ขนมปังขาว", unit: "แผ่น", per: 1, def: 2, k: 75, p: 2.5, c: 14, f: 1 },
   { id: "sweet_potato", n: "มันหวาน (ต้ม)", unit: "g", per: 100, def: 150, k: 86, p: 1.6, c: 20, f: 0.1 },
   { id: "milk", n: "นมจืด 200 ml", unit: "กล่อง", per: 1, def: 1, k: 130, p: 6.4, c: 9.6, f: 7.4 },
+  { id: "greek_cheesebaron", n: "กรีกโยเกิร์ต The Cheese Baron รสธรรมชาติ", unit: "g", per: 100, def: 100, k: 160, p: 9, c: 5, f: 11 },
   { id: "whey", n: "เวย์โปรตีน 1 สกู๊ป (30 g)", unit: "สกู๊ป", per: 1, def: 1, k: 120, p: 24, c: 3, f: 1.5 },
   { id: "oil", n: "น้ำมันพืช", unit: "ช้อนโต๊ะ", per: 1, def: 1, k: 120, p: 0, c: 0, f: 14 },
   { id: "krapao", n: "ข้าวกะเพราหมูสับ + ไข่ดาว", unit: "จาน", per: 1, def: 1, k: 650, p: 30, c: 70, f: 28 },
