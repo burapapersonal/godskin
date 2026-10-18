@@ -24,6 +24,9 @@ export const FOODS = [
   { id: "greek_cheesebaron", n: "กรีกโยเกิร์ต The Cheese Baron รสธรรมชาติ", unit: "g", per: 100, def: 100, k: 160, p: 9, c: 5, f: 11 },
   { id: "whey", n: "เวย์โปรตีน 1 สกู๊ป (30 g)", unit: "สกู๊ป", per: 1, def: 1, k: 120, p: 24, c: 3, f: 1.5 },
   { id: "oil", n: "น้ำมันพืช", unit: "ช้อนโต๊ะ", per: 1, def: 1, k: 120, p: 0, c: 0, f: 14 },
+  // 7-Eleven items: no published label found; estimated from typical pork shumai / minced pork rolls.
+  { id: "seven_shumai", n: "ขนมจีบหมู เซเว่น (ค่าประมาณ)", unit: "ลูก", per: 1, def: 6, k: 45, p: 2.5, c: 3, f: 2.5 },
+  { id: "seven_seaweed_pork", n: "หมูห่อสาหร่าย เซเว่น (ค่าประมาณ)", unit: "ชิ้น", per: 1, def: 5, k: 50, p: 3.5, c: 2, f: 3 },
   { id: "krapao", n: "ข้าวกะเพราหมูสับ + ไข่ดาว", unit: "จาน", per: 1, def: 1, k: 650, p: 30, c: 70, f: 28 },
   { id: "chicken_rice", n: "ข้าวมันไก่", unit: "จาน", per: 1, def: 1, k: 600, p: 28, c: 75, f: 21 },
 ];
