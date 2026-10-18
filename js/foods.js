@@ -27,6 +27,8 @@ export const FOODS = [
   { id: "greek_cheesebaron", n: "กรีกโยเกิร์ต The Cheese Baron รสธรรมชาติ", unit: "g", per: 100, def: 100, k: 160, p: 9, c: 5, f: 11 },
   { id: "whey", n: "เวย์โปรตีน 1 สกู๊ป (30 g)", unit: "สกู๊ป", per: 1, def: 1, k: 120, p: 24, c: 3, f: 1.5 },
   { id: "oil", n: "น้ำมันพืช", unit: "ช้อนโต๊ะ", per: 1, def: 1, k: 120, p: 0, c: 0, f: 14 },
+  // CP tender chicken breast, 90 g pack: plain 80 kcal P17 C2 F0.5; flavoured packs run ~90 kcal.
+  { id: "seven_chicken", n: "อกไก่นุ่ม ซีพี เซเว่น (ซอง ~90 g)", unit: "ซอง", per: 1, def: 2, k: 85, p: 17, c: 2.5, f: 0.8 },
   // Shumai from the CP bag label (120 g): 300 kcal, P9 C21 F20, sodium 900 mg.
   // The seaweed pork roll has no label yet; estimated from typical minced pork rolls.
   { id: "seven_shumai", n: "ขนมจีบ เซเว่น (ถุง 120 g)", unit: "ถุง", per: 1, def: 1, k: 300, p: 9, c: 21, f: 20 },
