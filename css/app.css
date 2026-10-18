@@ -289,3 +289,5 @@ svg.mv{display:block;width:100%;max-width:300px;margin:6px auto 0;background:var
 .mv-fig .mv-c,.mv-ghost .mv-c{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4}
 .mv-fig .mv-p{stroke:var(--muted);stroke-width:2}
 .yt{display:inline-block;margin-top:6px;font-size:13px;color:var(--accent)}
+svg.mv{cursor:pointer}
+.mv .mv-pause{fill:var(--muted);font-size:11px;font-family:var(--f-body)}

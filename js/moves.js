@@ -307,35 +307,37 @@ export function phaseAt(ms) {
   return 0;
 }
 
-const NS = "http://www.w3.org/2000/svg";
 const Y = (y) => 210 - y;
-// Draws the pattern into `svg` and animates it until the svg leaves the page or is hidden.
+// Draws the pattern into `svg` and animates it while its <details> stays open. It plays even with
+// reduced motion on, since the user opened it on purpose to watch; tapping it pauses and resumes.
 export function mountMove(svg, id) {
   const [name, grip] = MOVE_OF[id] || [];
   const m = MOVES[name];
   if (!m) return false;
+  if (svg.dataset.running) return true;
   svg.setAttribute("viewBox", "20 0 220 210");
   svg.innerHTML = `<line class="mv-g" x1="0" y1="${Y(10)}" x2="260" y2="${Y(10)}"/>` +
     (m.props || []).map(([, x1, y1, x2, y2]) => `<line class="mv-p" x1="${x1}" y1="${Y(y1)}" x2="${x2}" y2="${Y(y2)}"/>`).join("") +
-    `<g class="mv-ghost"></g><g class="mv-fig"></g>`;
+    `<g class="mv-ghost"></g><g class="mv-fig"></g><text class="mv-pause" x="232" y="20" text-anchor="end"></text>`;
   const draw = (g, t) => {
     const { segs, dots } = frame(m, t, grip);
     g.innerHTML = segs.map(([x1, y1, x2, y2, c]) => `<line class="mv-${c}" x1="${x1.toFixed(1)}" y1="${Y(y1).toFixed(1)}" x2="${x2.toFixed(1)}" y2="${Y(y2).toFixed(1)}"/>`).join("") +
       dots.map(([x, y, r, c]) => `<circle class="mv-${c}" cx="${x.toFixed(1)}" cy="${Y(y).toFixed(1)}" r="${r}"/>`).join("");
   };
-  const fig = svg.querySelector(".mv-fig");
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    draw(svg.querySelector(".mv-ghost"), 0);
-    draw(fig, 1);
-    return true;
-  }
+  const fig = svg.querySelector(".mv-fig"), label = svg.querySelector(".mv-pause");
   draw(svg.querySelector(".mv-ghost"), 0);
-  const t0 = performance.now();
+  let clock = 0, last = null, paused = false;
+  svg.onclick = () => { paused = !paused; label.textContent = paused ? "หยุดอยู่ แตะเพื่อเล่น" : ""; };
+  const open = () => svg.isConnected && svg.closest("details")?.open !== false;
   const tick = (now) => {
-    if (!svg.isConnected || svg.closest("[hidden]")) return;
-    draw(fig, phaseAt(now - t0));
+    if (!open()) { delete svg.dataset.running; return; }
+    if (!paused) clock += last == null ? 0 : Math.min(100, now - last);
+    last = now;
+    draw(fig, phaseAt(clock));
     requestAnimationFrame(tick);
   };
+  svg.dataset.running = "1";
+  draw(fig, 0);
   requestAnimationFrame(tick);
   return true;
 }

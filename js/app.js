@@ -181,7 +181,7 @@ function renderDay() {
       (ex.setup ? `<p class="setup"><span class="label">ตั้งเครื่อง</span> ${esc(ex.setup)}</p>` : "") +
       (ex.log !== false ? `<details class="move"><summary>ดูท่า</summary>` +
         (MOVE_OF[ex.id] ? `<svg class="mv" data-move="${ex.id}" role="img" aria-label="ภาพเคลื่อนไหวท่า ${esc(ex.n)}"></svg>
-          <p class="note">ภาพคร่าวๆ ให้เห็นทางเดินของท่า สีเทาคือท่าเริ่ม ขึ้นเร็ว 1 วินาที ลงช้า 1.5 วินาที รายละเอียดฟอร์มดูจากคลิปจริง</p>` : "") +
+          <p class="note">ภาพคร่าวๆ ให้เห็นทางเดินของท่า สีเทาคือท่าเริ่ม ขึ้นเร็ว 1 วินาที ลงช้า 1.5 วินาที แตะภาพเพื่อหยุดหรือเล่นต่อ รายละเอียดฟอร์มดูจากคลิปจริง</p>` : "") +
         `<a class="yt" href="https://www.youtube.com/results?search_query=${encodeURIComponent(ytQuery(ex.n))}" target="_blank" rel="noopener">ดูคลิปจริงบน YouTube ↗</a></details>` : "");
     if (ex.log !== false) {
       html += `<div class="sugg"><span class="tag ${sg.kind}">${esc(sg.tag)}</span><span>${esc(sg.text)}</span>` +
