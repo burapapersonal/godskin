@@ -4,6 +4,7 @@
 
 export const FOODS = [
   { id: "rice", n: "ข้าวสวย (สุก)", unit: "g", per: 100, def: 150, k: 130, p: 2.7, c: 28, f: 0.3 },
+  { id: "rice_bowl", n: "ข้าวสวย ถ้วย (~150 g)", unit: "ถ้วย", per: 1, def: 2, k: 195, p: 4, c: 42, f: 0.5 },
   { id: "rice_brown", n: "ข้าวกล้อง (สุก)", unit: "g", per: 100, def: 150, k: 123, p: 2.7, c: 26, f: 1 },
   { id: "egg", n: "ไข่ไก่ ต้ม/ดิบ", unit: "ฟอง", per: 1, def: 2, k: 72, p: 6.3, c: 0.4, f: 4.8 },
   { id: "omelette", n: "ไข่เจียว (รวมน้ำมันที่อม)", unit: "ฟอง", per: 1, def: 3, k: 115, p: 6.3, c: 0.5, f: 9.5 },
@@ -11,6 +12,9 @@ export const FOODS = [
   { id: "pork_loin", n: "หมูสันนอก (น้ำหนักดิบ)", unit: "g", per: 100, def: 200, k: 143, p: 21.4, c: 0, f: 5.7 },
   { id: "pork_mince", n: "หมูบดไม่ติดมัน (น้ำหนักดิบ)", unit: "g", per: 100, def: 200, k: 160, p: 20, c: 0, f: 8.5 },
   { id: "chicken_breast", n: "อกไก่ (น้ำหนักดิบ)", unit: "g", per: 100, def: 200, k: 120, p: 22.5, c: 0, f: 2.6 },
+  { id: "beef_belly", n: "เนื้อวัวสามชั้น / belly cut (น้ำหนักดิบ)", unit: "g", per: 100, def: 100, k: 330, p: 15, c: 0, f: 30 },
+  { id: "pork_belly", n: "หมูสามชั้น (น้ำหนักดิบ)", unit: "g", per: 100, def: 100, k: 518, p: 9.3, c: 0, f: 53 },
+  { id: "kimchi", n: "กิมจิผักกาด (เค็ม: โซเดียม ~500 mg/100 g)", unit: "g", per: 100, def: 100, k: 20, p: 1.1, c: 3, f: 0.5 },
   { id: "mama", n: "มาม่า 1 ซอง (รวมเครื่องปรุง)", unit: "ซอง", per: 1, def: 1, k: 280, p: 6, c: 38, f: 11 },
   { id: "banana", n: "กล้วยหอม", unit: "ลูก", per: 1, def: 1, k: 105, p: 1.3, c: 27, f: 0.4 },
   { id: "oats", n: "ข้าวโอ๊ต (แห้ง)", unit: "g", per: 100, def: 50, k: 380, p: 13, c: 66, f: 7 },
