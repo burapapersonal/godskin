@@ -351,11 +351,12 @@ async function addFood(entry) {
   renderFood();
 }
 
-function bar(label, have, goal, unit) {
+// `min` turns the goal into a range: anything from min up to goal counts as on target.
+function bar(label, have, goal, unit, min) {
   const pct = goal ? Math.min(100, (have / goal) * 100) : 0;
   const over = goal && have > goal * 1.1;
   return `<div class="macro"><div class="macro-h"><span class="label">${label}</span>
-    <span class="mono">${Math.round(have)} / ${goal} ${unit}</span></div>
+    <span class="mono">${Math.round(have)} / ${min ? `${min}–` : ""}${goal} ${unit}${min && have >= min ? " ✓" : ""}</span></div>
     <div class="dp-bar"><i style="width:${pct}%;${over ? "background:var(--warn)" : ""}"></i></div></div>`;
 }
 
@@ -372,6 +373,9 @@ function renderFood() {
   const trend = L.bodyTrend(state.body, d, mode.range).verdict;
   const trendTip = { slow: "น้ำหนักขึ้นช้ากว่าเป้า ถ้าเป็นแบบนี้ 2 สัปดาห์ติด เพิ่มอีก 150–200 kcal", fast: "น้ำหนักขึ้นเร็วเกินเป้า ลดลง 150 kcal", ok: "น้ำหนักขึ้นตรงเป้า กินเท่านี้ต่อ" }[trend];
   const guard = bulkGuard();
+  const pMin = tg?.pMin ?? 123, fMin = tg?.fMin ?? 62;
+  const lowFat = L.lowStreak(state.food, d, "f", fMin);
+  const lowP = L.lowStreak(state.food, d, "p", pMin);
 
   // Readiness: the most recent meal decides when lifting is comfortable.
   const lastMeal = meals[meals.length - 1];
@@ -420,7 +424,7 @@ function renderFood() {
         ${mode === L.BULK.size && week() <= 2 ? `<div class="banner"><b>ยังอยู่ช่วง Re-entry</b> ซ้อมเบาอยู่ ส่วนเกินที่มากขึ้นจะกลายเป็นไขมันมากกว่า แนะนำให้เริ่ม Size ตั้งแต่สัปดาห์ 3</div>` : ""}
         ${mode === L.BULK.size && guard.length ? `<div class="banner bad"><b>ควรกลับไปโหมด Lean</b> ${guard.join(" · ")}</div>` : ""}
         ${tg ? `<div class="big">${tg.kcal.toLocaleString()} kcal</div>
-          <p class="mono">โปรตีน ${tg.p} g · คาร์บ ${tg.c} g · ไขมัน ${tg.f} g</p>
+          <p class="mono">โปรตีน ${tg.pMin}–${tg.p} g · คาร์บ ${tg.c} g · ไขมัน ${tg.fMin}–${tg.f} g</p>
           <p class="note">ใช้น้ำหนัก ${kg.toFixed(1)} kg (${src}) · ใช้พลังงานต่อวัน ~${tg.tdee.toLocaleString()} kcal + ส่วนเกิน ${mode.surplus} kcal สำหรับสร้างกล้าม</p>
           ${trendTip ? `<p class="note">${trendTip}</p>` : ""}`
         : `<p class="note">กรอกวันเกิดเพื่อคำนวณให้ตรงตัว ระหว่างนี้ใช้ช่วง 2,900–3,100 kcal</p>`}
@@ -436,10 +440,13 @@ function renderFood() {
       <h3>วันนี้กินไปแล้ว</h3>
       <div class="macros">
         ${bar("พลังงาน", tot.kcal, tg?.kcal ?? 3000, "kcal")}
-        ${bar("โปรตีน", tot.p, tg?.p ?? 154, "g")}
+        ${bar("โปรตีน", tot.p, tg?.p ?? 154, "g", tg?.pMin ?? 123)}
         ${bar("คาร์บ", tot.c, tg?.c ?? 400, "g")}
-        ${bar("ไขมัน", tot.f, tg?.f ?? 77, "g")}
+        ${bar("ไขมัน", tot.f, tg?.f ?? 77, "g", tg?.fMin ?? 62)}
       </div>
+      <p class="note">แต่ละวันขาดเกินได้ โปรตีนถึงขั้นต่ำก็พอ พลังงานดูเฉลี่ยทั้งสัปดาห์จากกราฟน้ำหนักตัว</p>
+      ${lowFat >= 3 ? `<div class="banner bad"><b>ไขมันต่ำ ${lowFat} วันติด</b> ต่ำกว่า ${fMin} g ต่อวันนานๆ กดฮอร์โมนเพศชาย เพิ่มไข่ทั้งฟอง โยเกิร์ต หรือหมูติดมันในมื้อที่ไม่ใช่ก่อนซ้อม</div>` : ""}
+      ${lowP >= 3 ? `<div class="banner"><b>โปรตีนต่ำ ${lowP} วันติด</b> ต่ำกว่า ${pMin} g กล้ามจะโตช้าลง เพิ่มอกไก่ 1–2 ซองหรือไข่ 2–3 ฟอง</div>` : ""}
       ${meals.length ? meals.map((m) => `<div class="meal"><div class="meal-h"><b class="mono">${m.t}</b><span class="mono">${m.kcal} kcal · P${Math.round(m.p)} C${Math.round(m.c)} F${Math.round(m.f)}</span></div>
         ${m.items.map((e) => `<div class="fitem"><span>${esc(e.n)} <span class="mono">${e.qty} ${esc(e.unit)}</span></span><span class="mono">${e.kcal}</span>
           <button class="x" data-del="${e.id}" aria-label="ลบ ${esc(e.n)}">×</button></div>`).join("")}</div>`).join("")

@@ -121,3 +121,23 @@ test("sexual health summary", () => {
   assert.equal(L.sexHealth(c, "2026-10-20").status, "bad");
   assert.equal(L.sexHealth({}, "2026-10-20").status, null);
 });
+
+test("protein and fat floors scale with body weight", () => {
+  const t = L.targets(77, 183, 25);
+  assert.equal(t.pMin, 123);
+  assert.equal(t.fMin, 62);
+  assert.ok(t.pMin < t.p && t.fMin < t.f);
+});
+
+test("lowStreak counts consecutive low days and stops at a gap", () => {
+  const e = (f) => [{ kcal: 500, p: 30, c: 50, f }];
+  const food = {
+    "2026-10-14": e(40),
+    "2026-10-16": e(50),
+    "2026-10-17": e(55),
+    "2026-10-18": e(10), // today is not counted
+  };
+  assert.equal(L.lowStreak(food, "2026-10-18", "f", 62), 2);
+  assert.equal(L.lowStreak({ ...food, "2026-10-16": e(70) }, "2026-10-18", "f", 62), 1);
+  assert.equal(L.lowStreak({}, "2026-10-18", "f", 62), 0);
+});

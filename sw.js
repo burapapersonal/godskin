@@ -1,5 +1,5 @@
 // Offline cache. Bump VERSION whenever app files change so phones pick up the new build.
-const VERSION = "godskin-v13";
+const VERSION = "godskin-v14";
 const SHELL = [
   "./", "index.html", "css/app.css", "js/app.js", "js/logic.js", "js/program.js", "js/store.js", "js/foods.js",
   "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png",

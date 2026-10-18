@@ -138,7 +138,8 @@ export function targets(kg, cm, age, surplus = SURPLUS) {
   const p = Math.round(kg * 2.0);
   const f = Math.round(kg * 1.0);
   const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
-  return { tdee, kcal, p, c, f };
+  // Floors: protein gains flatten past ~1.6 g/kg; fat below ~0.8 g/kg for days at a time drags testosterone.
+  return { tdee, kcal, p, c, f, pMin: Math.round(kg * 1.6), fMin: Math.round(kg * 0.8) };
 }
 
 const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
@@ -176,6 +177,17 @@ export function dayTotals(entries) {
   for (const k in t) t[k] = Math.round(t[k] * 10) / 10;
   t.kcal = Math.round(t.kcal);
   return t;
+}
+
+// Consecutive logged days before `today` whose total `key` fell under `floor`.
+// A day with nothing logged ends the streak, since an unlogged day says nothing.
+export function lowStreak(food, today, key, floor) {
+  let n = 0;
+  for (let d = addDays(today, -1); (food[d] || []).length; d = addDays(d, -1)) {
+    if (dayTotals(food[d])[key] >= floor) break;
+    n++;
+  }
+  return n;
 }
 
 // Whole years between a birth date and `today` (both ISO dates).
