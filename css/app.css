@@ -257,3 +257,15 @@ details[open] .spark .end{animation:popin .3s .75s both}
 .timer.done .arc{stroke:#fff}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* exercise swap */
+.swapbtn{border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;align-self:center;color:var(--ink)}
+.swapbtn[aria-expanded="true"]{border-color:var(--accent)}
+.swap{margin:8px 0 4px;padding:10px;border-radius:var(--r);background:var(--sunk)}
+.chipbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+/* 1–5 ratings */
+.rate{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.rate button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--sunk);font-family:var(--f-mono);font-weight:700;font-size:16px;cursor:pointer;color:var(--ink)}
+.rate button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cmpline{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.cmpline b{grid-column:1/-1}
+.myfoods .fitem{padding:4px 0}

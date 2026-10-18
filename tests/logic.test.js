@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as L from "../js/logic.js";
-import { PHASES } from "../js/program.js";
+import { PHASES, DAYS, SWAPS, altFor } from "../js/program.js";
 
 const ex = { id: "x", s: 3, lo: 6, hi: 10, rest: 120, inc: 2.5 };
 const T = "2026-10-20";
@@ -140,4 +140,49 @@ test("lowStreak counts consecutive low days and stops at a gap", () => {
   assert.equal(L.lowStreak(food, "2026-10-18", "f", 62), 2);
   assert.equal(L.lowStreak({ ...food, "2026-10-16": e(70) }, "2026-10-18", "f", 62), 1);
   assert.equal(L.lowStreak({}, "2026-10-18", "f", 62), 0);
+});
+
+test("every swap points at a defined exercise and never collides within a day", () => {
+  for (const day of DAYS) {
+    const owner = new Map(day.ex.map((e) => [e.id, e.id]));
+    for (const ex of day.ex) {
+      for (const alt of SWAPS[ex.id] || []) {
+        const a = altFor(ex, alt);
+        assert.equal(a.id, alt);
+        assert.ok(a.n && a.note, `${alt} needs a name and note`);
+        assert.equal(a.s, ex.s);
+        const prev = owner.get(alt);
+        assert.ok(!prev || prev === ex.id, `${day.th}: ${alt} used by ${prev} and ${ex.id}`);
+        owner.set(alt, ex.id);
+      }
+    }
+  }
+  for (const id of Object.keys(SWAPS)) assert.ok(DAYS.some((d) => d.ex.some((e) => e.id === id)), id);
+  const ex = DAYS[0].ex[0];
+  assert.equal(altFor(ex, "nope"), ex);
+  assert.equal(altFor(ex, undefined), ex);
+});
+
+test("sexInsights compares groups only when both have 3+ entries", () => {
+  const sex = {}, checkins = {}, fat = {};
+  // Oct 2026: 5th Mon .. 18th Sun. Good nights scored 4–5, short sleep scored 2.
+  ["2026-10-05", "2026-10-07", "2026-10-09", "2026-10-11"].forEach((d) => { sex[d] = { erect: 5, stamina: 4 }; checkins[d] = { sleepH: 8 }; fat[d] = 80; });
+  ["2026-10-13", "2026-10-15", "2026-10-17"].forEach((d) => { sex[d] = { erect: 2, stamina: 2 }; checkins[d] = { sleepH: 5.5 }; fat[d] = 40; });
+  const r = L.sexInsights(sex, checkins, fat, "2026-10-18");
+  assert.equal(r.n, 7);
+  const sleep = r.comps.find((c) => c.t === "การนอนคืนก่อน");
+  assert.deepEqual([sleep.a.avg, sleep.a.n, sleep.b.avg, sleep.b.n], [4.5, 4, 2, 3]);
+  assert.ok(r.comps.find((c) => c.t === "ไขมันที่กินวันนั้น"));
+  // only Tue 13 and Sat 17 are leg days -> fewer than 3, no comparison
+  assert.ok(!r.comps.find((c) => c.t === "วันที่ซ้อม"));
+  assert.deepEqual(L.sexInsights({}, {}, {}, "2026-10-18"), { n: 0, comps: [] });
+});
+
+test("mergeData unions my foods by id and sex log by date", async () => {
+  const S = await import("../js/store.js").catch(() => null);
+  if (!S) return;
+  const m = S.mergeData({ myfoods: [{ id: "a", n: "A" }], sex: { "2026-10-01": { erect: 3, stamina: 3 } } },
+    { myfoods: [{ id: "a", n: "A2" }, { id: "b", n: "B" }], sex: { "2026-10-02": { erect: 4, stamina: 4 } } });
+  assert.deepEqual(m.myfoods.map((f) => f.n), ["A2", "B"]);
+  assert.equal(Object.keys(m.sex).length, 2);
 });

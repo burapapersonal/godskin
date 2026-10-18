@@ -268,3 +268,28 @@ export function sexHealth(checkins, today, n = 14) {
   const status = morningRate >= 0.7 && lowLibido <= 2 ? "good" : morningRate >= 0.5 && lowLibido <= 4 ? "watch" : "bad";
   return { logged, noMorning, lowLibido, morningRate, status };
 }
+
+// Sex log vs what might drive it. `sex` maps date -> { erect, stamina } (1–5 each); the morning
+// check-in of the same date holds the sleep before it. `fat` maps date -> grams eaten that day.
+// A comparison appears only once both sides have 3+ entries, so a lone bad night can't make a trend.
+export function sexInsights(sex, checkins, fat, today, { legDows = [2, 6], fatMin = 62, days = 90 } = {}) {
+  const rows = [];
+  for (let i = 0; i < days; i++) {
+    const d = addDays(today, -i), s = sex[d];
+    if (!s) continue;
+    rows.push({ d, score: (s.erect + s.stamina) / 2, erect: s.erect, stamina: s.stamina,
+      sleepH: checkins[d]?.sleepH, dow: new Date(d + "T12:00:00").getDay(), fat: fat[d] });
+  }
+  const avg = (xs, k = "score") => Math.round((xs.reduce((a, r) => a + r[k], 0) / xs.length) * 10) / 10;
+  const comps = [];
+  const compare = (t, pick, nameA, nameB) => {
+    const a = rows.filter((r) => pick(r) === true), b = rows.filter((r) => pick(r) === false);
+    if (a.length >= 3 && b.length >= 3) comps.push({ t, a: { name: nameA, avg: avg(a), n: a.length }, b: { name: nameB, avg: avg(b), n: b.length } });
+  };
+  compare("การนอนคืนก่อน", (r) => (r.sleepH == null ? null : r.sleepH >= 7), "นอน 7 ชม.ขึ้นไป", "นอนน้อยกว่า 7 ชม.");
+  compare("วันที่ซ้อม", (r) => legDows.includes(r.dow), "วันขา", "วันอื่น");
+  compare("ไขมันที่กินวันนั้น", (r) => (r.fat == null ? null : r.fat >= fatMin), `ไขมัน ${fatMin} g ขึ้นไป`, `ต่ำกว่า ${fatMin} g`);
+  return rows.length
+    ? { n: rows.length, erect: avg(rows, "erect"), stamina: avg(rows, "stamina"), comps }
+    : { n: 0, comps };
+}

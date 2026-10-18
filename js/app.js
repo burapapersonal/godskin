@@ -1,7 +1,7 @@
-import { PHASES, DAYS } from "./program.js";
+import { PHASES, DAYS, SWAPS, altFor, altName } from "./program.js";
 import * as L from "./logic.js";
 import * as S from "./store.js";
-import { FOODS, foodById, portion } from "./foods.js";
+import { FOODS, foodById as builtinFood, portion } from "./foods.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -14,6 +14,8 @@ const state = {
   checkins: {},   // date -> { noMorning, lowLibido, ... }
   food: {},       // date -> [{ id, t:"HH:MM", n, qty, unit, kcal, p, c, f }]
   measures: [],   // [{ d, arm, chest, waist }] in cm
+  myfoods: [],    // user-added foods, same shape as FOODS, ids start with "my_"
+  sex: {},        // date -> { erect, stamina } each 1–5
   tab: "train",
   dayIdx: 0,
 };
@@ -30,6 +32,8 @@ async function boot() {
   state.checkins = await S.get("checkins", {});
   state.food = await S.get("food", {});
   state.measures = await S.get("measures", []);
+  state.myfoods = await S.get("myfoods", []);
+  state.sex = await S.get("sex", {});
   state.photos = await S.get("photos", []);   // [{ id, d, pose }]; images under "photo:<id>"
   if (!state.settings.startDate) {
     state.settings.startDate = L.startForWeek(1, today());
@@ -120,6 +124,9 @@ function renderDays() {
 }
 
 function hist(id) { return state.logs[id]?.history || []; }
+// The day's exercises with the user's swaps applied.
+const swaps = () => state.settings.swaps || {};
+const dayEx = (d) => d.ex.map((e) => altFor(e, swaps()[e.id]));
 function todayEntry(id) { return hist(id).find((h) => h.d === today()); }
 
 function sparkline(history) {
@@ -145,7 +152,10 @@ function renderDay() {
 
   html += `<div class="dayprog" id="dayprog"><div class="dp-bar"><i id="dpFill"></i></div><span id="dpText"></span></div>`;
   html += `<div class="exlist">`;
-  d.ex.forEach((ex, i) => {
+  const orig = d.ex;
+  dayEx(d).forEach((ex, i) => {
+    shownEx[ex.id] = ex;
+    const base = orig[i], alts = SWAPS[base.id] || [];
     const n = L.setsFor(ex, p, cut);
     const h = hist(ex.id);
     const sg = L.suggest(ex, p, h, today());
@@ -157,7 +167,12 @@ function renderDay() {
     const rest = ex.rest ? `<span>พัก ${ex.rest >= 60 ? Math.floor(ex.rest / 60) + ":" + String(ex.rest % 60).padStart(2, "0") : ex.rest + "s"}</span>` : "";
     html += `<article class="ex${done ? " done" : ""}" id="ex_${ex.id}" style="--i:${i}">
       <div class="ex-h"><span class="ex-n">${String(i + 1).padStart(2, "0")}</span><h3>${esc(ex.n)}</h3>` +
-      (ex.log !== false ? `<svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" pathLength="1"/></svg>` : "") + `</div>
+      (alts.length ? `<button class="swapbtn" data-swapopen="${base.id}" aria-expanded="false" aria-controls="sw_${base.id}">สลับท่า</button>` : "") +
+      (ex.log !== false ? `<svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" pathLength="1"/></svg>` : "") + `</div>` +
+      (alts.length ? `<div class="swap" id="sw_${base.id}" hidden><span class="label">เครื่องไม่ว่างหรือไหล่ไม่โอเค เลือกท่าแทน (จำไว้จนกว่าจะเปลี่ยนกลับ)</span><div class="chips">` +
+        [base.id, ...alts].map((a) => `<button class="chipbtn" data-swap="${base.id}" data-to="${a}" aria-pressed="${a === ex.id}">${esc(a === base.id ? base.n + " (เดิม)" : altName(a))}</button>`).join("") +
+        `</div></div>` : "") +
+      (ex.swappedFrom ? `<p class="setup"><span class="label">ท่าแทน</span> ใช้แทน ${esc(base.n)} ประวัติแยกตามท่า</p>` : "") + `
       <div class="rx"><span>${unit}</span>${rest}${ex.time ? "" : `<span>RIR ${p.rir}</span>`}</div>
       <p class="note">${esc(ex.note)}</p>` +
       (ex.setup ? `<p class="setup"><span class="label">ตั้งเครื่อง</span> ${esc(ex.setup)}</p>` : "");
@@ -191,12 +206,24 @@ function renderDay() {
     });
   });
   v.querySelectorAll("[data-rest]").forEach((b) => b.addEventListener("click", () => startRest(b.dataset.rest)));
+  v.querySelectorAll("[data-swapopen]").forEach((b) => b.addEventListener("click", () => {
+    const box = $("sw_" + b.dataset.swapopen);
+    box.hidden = !box.hidden;
+    b.setAttribute("aria-expanded", String(!box.hidden));
+  }));
+  v.querySelectorAll("[data-swap]").forEach((b) => b.addEventListener("click", async () => {
+    const all = { ...swaps() };
+    if (b.dataset.to === b.dataset.swap) delete all[b.dataset.swap]; else all[b.dataset.swap] = b.dataset.to;
+    state.settings.swaps = all;
+    await S.set("settings", state.settings);
+    renderDay();
+  }));
   updateProgress();
 }
 
 function updateProgress() {
   const d = DAYS[state.dayIdx], p = phase(), cut = cutOne();
-  const loggable = d.ex.filter((e) => e.log !== false);
+  const loggable = dayEx(d).filter((e) => e.log !== false);
   const box = $("dayprog");
   if (!box || !loggable.length) return;
   const done = loggable.filter((e) => (todayEntry(e.id)?.r.length || 0) >= L.setsFor(e, p, cut)).length;
@@ -225,7 +252,9 @@ function celebrate(ex, weights) {
   navigator.vibrate?.([40, 40, 90]);
 }
 
-const exById = (id) => DAYS.flatMap((d) => d.ex).find((e) => e.id === id);
+// Exercises as currently shown (after swaps), so saving uses the swapped movement's rep range.
+const shownEx = {};
+const exById = (id) => shownEx[id] || DAYS.flatMap((d) => d.ex).find((e) => e.id === id);
 
 const timers = {};
 function scheduleSave(id) {
@@ -344,6 +373,11 @@ function bulkGuard() {
   return out;
 }
 
+const findFood = (id) => state.myfoods.find((f) => f.id === id) || builtinFood(id);
+const UNITS = ["ถุง", "ซอง", "ชิ้น", "แผ่น", "กล่อง", "ขวด", "ถ้วย", "จาน", "ลูก", "ฟอง", "g", "ml"];
+const NA_MAX = 2000; // WHO daily sodium limit, mg
+let myDelArm = null;
+
 async function addFood(entry) {
   const d = today();
   state.food[d] = (state.food[d] || []).concat({ id: uid(), ...entry });
@@ -369,6 +403,8 @@ function renderFood() {
   const tg = age ? L.targets(kg, cm, age, mode.surplus) : null;
   const entries = state.food[d] || [];
   const tot = L.dayTotals(entries);
+  const naKnown = entries.filter((e) => e.na != null);
+  const na = naKnown.reduce((a, e) => a + e.na, 0);
   const meals = L.groupMeals(entries);
   const trend = L.bodyTrend(state.body, d, mode.range).verdict;
   const trendTip = { slow: "น้ำหนักขึ้นช้ากว่าเป้า ถ้าเป็นแบบนี้ 2 สัปดาห์ติด เพิ่มอีก 150–200 kcal", fast: "น้ำหนักขึ้นเร็วเกินเป้า ลดลง 150 kcal", ok: "น้ำหนักขึ้นตรงเป้า กินเท่านี้ต่อ" }[trend];
@@ -444,6 +480,8 @@ function renderFood() {
         ${bar("คาร์บ", tot.c, tg?.c ?? 400, "g")}
         ${bar("ไขมัน", tot.f, tg?.f ?? 77, "g", tg?.fMin ?? 62)}
       </div>
+      ${naKnown.length ? `<p class="mono${na > NA_MAX ? " err" : ""}">โซเดียม ${na.toLocaleString()} / ${NA_MAX.toLocaleString()} mg${naKnown.length < entries.length ? ` <span class="note">(นับเฉพาะ ${naKnown.length} รายการที่รู้ค่า)</span>` : ""}</p>` : ""}
+      ${na > NA_MAX ? `<div class="banner"><b>เค็มเกินวันละ ${NA_MAX.toLocaleString()} mg</b> ดื่มน้ำเพิ่ม มื้อที่เหลือเลือกของไม่ปรุงรส ถ้าเค็มแบบนี้ทุกวัน ความดันขึ้นซึ่งกระทบหลอดเลือดและการแข็งตัว</div>` : ""}
       <p class="note">แต่ละวันขาดเกินได้ โปรตีนถึงขั้นต่ำก็พอ พลังงานดูเฉลี่ยทั้งสัปดาห์จากกราฟน้ำหนักตัว</p>
       ${lowFat >= 3 ? `<div class="banner bad"><b>ไขมันต่ำ ${lowFat} วันติด</b> ต่ำกว่า ${fMin} g ต่อวันนานๆ กดฮอร์โมนเพศชาย เพิ่มไข่ทั้งฟอง โยเกิร์ต หรือหมูติดมันในมื้อที่ไม่ใช่ก่อนซ้อม</div>` : ""}
       ${lowP >= 3 ? `<div class="banner"><b>โปรตีนต่ำ ${lowP} วันติด</b> ต่ำกว่า ${pMin} g กล้ามจะโตช้าลง เพิ่มอกไก่ 1–2 ซองหรือไข่ 2–3 ฟอง</div>` : ""}
@@ -456,7 +494,10 @@ function renderFood() {
     <div class="card">
       <h3>เพิ่มอาหาร</h3>
       <div class="field">
-        <select id="fsel" aria-label="อาหาร">${FOODS.map((f) => `<option value="${f.id}">${esc(f.n)}</option>`).join("")}</select>
+        <select id="fsel" aria-label="อาหาร">
+          ${state.myfoods.length ? `<optgroup label="อาหารของฉัน">${state.myfoods.map((f) => `<option value="${f.id}">${esc(f.n)}</option>`).join("")}</optgroup>` : ""}
+          <optgroup label="รายการในแอป">${FOODS.map((f) => `<option value="${f.id}">${esc(f.n)}</option>`).join("")}</optgroup>
+        </select>
       </div>
       <div class="field">
         <input type="number" id="fqty" min="0" step="any" inputmode="decimal" aria-label="ปริมาณ"><span id="funit"></span>
@@ -465,15 +506,21 @@ function renderFood() {
       </div>
       <p class="note mono" id="fprev"></p>
       ${recent.length ? `<div><span class="label">กินบ่อย แตะเพื่อเพิ่มตอนนี้</span><div class="chips">${recent.map((e, i) => `<button class="chipbtn" data-recent="${i}">${esc(e.n)} ${e.qty} ${esc(e.unit)}</button>`).join("")}</div></div>` : ""}
-      <details class="hist"><summary>อาหารที่ไม่มีในรายการ</summary>
-        <div class="field" style="margin-top:8px">
-          <input id="cn" placeholder="ชื่ออาหาร" aria-label="ชื่ออาหาร" style="width:100%">
-          <input type="number" id="ck" placeholder="kcal" aria-label="kcal">
-          <input type="number" id="cp" placeholder="โปรตีน g" aria-label="โปรตีน g">
-          <input type="number" id="cc" placeholder="คาร์บ g" aria-label="คาร์บ g">
-          <input type="number" id="cf" placeholder="ไขมัน g" aria-label="ไขมัน g">
-          <button class="btn ghost" id="cadd">เพิ่ม</button><span id="cerr" class="err"></span>
+      <details class="hist" id="myBox"${state.myOpen ? " open" : ""}><summary>เพิ่มอาหารของฉัน (จากฉลาก)</summary>
+        <p class="note">ดูตาราง "ข้อมูลโภชนาการ" บนซอง กรอกค่าต่อหนึ่งหน่วยบริโภค เช่น 1 ถุง หรือ 100 g ชื่อซ้ำกับของเดิมจะทับค่าเดิม</p>
+        <div class="field"><input id="cn" placeholder="ชื่ออาหาร เช่น ขนมจีบกุ้ง เซเว่น" aria-label="ชื่ออาหาร" style="width:100%"></div>
+        <div class="field"><label for="cper">ค่าต่อ</label><input type="number" id="cper" min="0" step="any" inputmode="decimal" value="1" aria-label="ปริมาณต่อหน่วยบริโภค">
+          <select id="cunit" aria-label="หน่วย" style="width:auto">${UNITS.map((u) => `<option>${u}</option>`).join("")}</select></div>
+        <div class="field">
+          <input type="number" id="ck" placeholder="kcal" aria-label="kcal" inputmode="decimal">
+          <input type="number" id="cp" placeholder="โปรตีน g" aria-label="โปรตีน g" inputmode="decimal">
+          <input type="number" id="cc" placeholder="คาร์บ g" aria-label="คาร์บ g" inputmode="decimal">
+          <input type="number" id="cf" placeholder="ไขมัน g" aria-label="ไขมัน g" inputmode="decimal">
+          <input type="number" id="cna" placeholder="โซเดียม mg" aria-label="โซเดียม mg (ไม่บังคับ)" inputmode="numeric">
         </div>
+        <div class="row-actions"><button class="btn" id="csave">บันทึกเข้ารายการ</button><button class="btn ghost" id="cadd">กินครั้งเดียว ไม่บันทึก</button><span id="cerr" class="err"></span></div>
+        ${state.myfoods.length ? `<div class="myfoods"><span class="label">อาหารของฉัน ${state.myfoods.length} รายการ</span>${state.myfoods.map((f) => `<div class="fitem"><span>${esc(f.n)} <span class="mono">${f.per} ${esc(f.unit)} · ${f.k} kcal · P${f.p}${f.na != null ? ` · Na ${f.na}` : ""}</span></span>
+          <button class="x${myDelArm === f.id ? " armed" : ""}" data-mydel="${f.id}" aria-label="ลบ ${esc(f.n)}">${myDelArm === f.id ? "ลบ?" : "×"}</button></div>`).join("")}</div>` : ""}
       </details>
     </div>
 
@@ -504,19 +551,19 @@ function renderFood() {
 
   const fsel = $("fsel"), fqty = $("fqty");
   const syncFood = (resetQty) => {
-    const f = foodById(fsel.value);
+    const f = findFood(fsel.value);
     if (resetQty) fqty.value = f.def;
     $("funit").textContent = f.unit;
     const q = Number(fqty.value) || 0;
     const v = portion(f, q);
-    $("fprev").textContent = `${v.kcal} kcal · โปรตีน ${v.p} g · คาร์บ ${v.c} g · ไขมัน ${v.f} g`;
+    $("fprev").textContent = `${v.kcal} kcal · โปรตีน ${v.p} g · คาร์บ ${v.c} g · ไขมัน ${v.f} g${v.na != null ? ` · โซเดียม ${v.na} mg` : ""}`;
   };
-  if (s.lastFood && foodById(s.lastFood)) fsel.value = s.lastFood;
+  if (s.lastFood && findFood(s.lastFood)) fsel.value = s.lastFood;
   syncFood(true);
   fsel.onchange = () => syncFood(true);
   fqty.oninput = () => syncFood(false);
   $("fadd").onclick = async () => {
-    const f = foodById(fsel.value), q = Number(fqty.value);
+    const f = findFood(fsel.value), q = Number(fqty.value);
     if (!q || q <= 0) { $("fprev").textContent = "กรอกปริมาณมากกว่า 0"; return; }
     state.settings.lastFood = f.id;
     await S.set("settings", state.settings);
@@ -524,18 +571,47 @@ function renderFood() {
   };
   document.querySelectorAll("[data-recent]").forEach((b) => b.onclick = () => {
     const e = recent[+b.dataset.recent];
-    addFood({ t: nowHM(), n: e.n, qty: e.qty, unit: e.unit, fid: e.fid, kcal: e.kcal, p: e.p, c: e.c, f: e.f });
+    addFood({ t: nowHM(), n: e.n, qty: e.qty, unit: e.unit, fid: e.fid, kcal: e.kcal, p: e.p, c: e.c, f: e.f, ...(e.na != null && { na: e.na }) });
   });
   document.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => {
     state.food[d] = (state.food[d] || []).filter((e) => e.id !== b.dataset.del);
     await S.set("food", state.food);
     renderFood();
   });
-  $("cadd").onclick = () => {
-    const n = $("cn").value.trim(), k = Number($("ck").value);
-    if (!n || !k) { $("cerr").textContent = "ใส่ชื่อและ kcal อย่างน้อย"; return; }
-    addFood({ t: nowHM(), n, qty: 1, unit: "ที่", kcal: Math.round(k), p: Number($("cp").value) || 0, c: Number($("cc").value) || 0, f: Number($("cf").value) || 0 });
+  $("myBox").ontoggle = () => { state.myOpen = $("myBox").open; };
+  const readMine = () => {
+    const n = $("cn").value.trim(), k = Number($("ck").value), per = Number($("cper").value);
+    if (!n || !(k > 0) || !(per > 0)) { $("cerr").textContent = "ใส่ชื่อ ปริมาณ และ kcal อย่างน้อย"; return null; }
+    const num = (id) => Math.max(0, Number($(id).value) || 0);
+    const f = { n, unit: $("cunit").value, per, def: per, k: Math.round(k), p: num("cp"), c: num("cc"), f: num("cf") };
+    if ($("cna").value !== "") f.na = Math.round(num("cna"));
+    return f;
   };
+  $("csave").onclick = async () => {
+    const f = readMine();
+    if (!f) return;
+    const same = state.myfoods.find((x) => x.n.toLowerCase() === f.n.toLowerCase());
+    f.id = same?.id || "my_" + uid();
+    state.myfoods = state.myfoods.filter((x) => x.id !== f.id).concat(f);
+    await S.set("myfoods", state.myfoods);
+    state.settings.lastFood = f.id;
+    await S.set("settings", state.settings);
+    renderFood();
+    $("fprev").textContent = `บันทึก "${f.n}" แล้ว เลือกไว้ให้ด้านบน กรอกปริมาณแล้วกดเพิ่ม`;
+  };
+  $("cadd").onclick = () => {
+    const f = readMine();
+    if (!f) return;
+    addFood({ t: $("ftime").value || nowHM(), n: f.n, qty: f.per, unit: f.unit, ...portion(f, f.per) });
+  };
+  document.querySelectorAll("[data-mydel]").forEach((b) => b.onclick = async () => {
+    const id = b.dataset.mydel;
+    if (myDelArm !== id) { myDelArm = id; renderFood(); return; }
+    myDelArm = null;
+    state.myfoods = state.myfoods.filter((f) => f.id !== id);
+    await S.set("myfoods", state.myfoods);
+    renderFood();
+  });
   const saveProfile = async () => {
     const dob = $("dob").value, h = Number($("height").value);
     const a = dob ? L.ageOn(dob, d) : 0;
@@ -862,6 +938,9 @@ function renderBody() {
 function renderCheck() {
   const t = today();
   const c = state.checkins[t] || {};
+  const slept = [];
+  for (let i = 0; i < 7; i++) { const h = state.checkins[L.addDays(t, -i)]?.sleepH; if (h != null) slept.push(h); }
+  const sleepAvg = slept.length >= 3 ? Math.round((slept.reduce((a, b) => a + b, 0) / slept.length) * 10) / 10 : null;
   const dots = [];
   for (let i = 13; i >= 0; i--) {
     const d = L.addDays(t, -i), ci = state.checkins[d];
@@ -875,6 +954,7 @@ function renderCheck() {
       <div class="card">
         <h3>วันนี้มีข้อไหนบ้าง</h3>
         <p class="note">ติ๊กเฉพาะข้อที่เป็น ไม่มีข้อไหนเลยก็กดบันทึกได้ (นับเป็นวันเขียว)</p>
+        <div class="field"><label for="ckSleep">เมื่อคืนนอน</label><input type="number" id="ckSleep" min="0" max="14" step="0.5" inputmode="decimal" value="${c.sleepH ?? ""}" placeholder="7.5"><span>ชม.</span></div>
         <div class="checks">${L.SIGNS.map((s) => `<label><input type="checkbox" id="ck_${s.k}" ${c[s.k] ? "checked" : ""}>${esc(s.t)}</label>`).join("")}</div>
         <div class="row-actions"><button class="btn" id="ckSave">บันทึก check-in</button><span id="ckOk" class="saved">${state.checkins[t] ? "บันทึกวันนี้แล้ว" : ""}</span></div>
       </div>
@@ -882,13 +962,83 @@ function renderCheck() {
         <h3>14 วันล่าสุด</h3>
         <div class="dots">${dots.join("")}</div>
         <p class="note">เขียว = ปกติ · เหลือง = 1 ข้อ · แดง = 2 ข้อขึ้นไป · เทา = ไม่ได้บันทึก</p>
+        ${sleepAvg ? `<p class="mono">นอนเฉลี่ย 7 วัน ${sleepAvg} ชม.${sleepAvg < 7 ? " · น้อยไป" : ""}</p>` : ""}
       </div>
-    </div>`;
+    </div>
+    ${sexHtml()}`;
   $("ckSave").onclick = async () => {
     const rec = {};
     L.SIGNS.forEach((s) => (rec[s.k] = $("ck_" + s.k).checked));
+    const h = Number($("ckSleep").value);
+    if ($("ckSleep").value !== "" && h >= 0 && h <= 14) {
+      rec.sleepH = h;
+      if (h < 7) rec.poorSleep = true;
+    }
     state.checkins[t] = rec;
     await S.set("checkins", state.checkins);
+    renderCheck();
+  };
+  wireSex();
+}
+
+/* ---------------- sex log ---------------- */
+// Logged in the evening for today, or the next morning for last night.
+let sexDay = null, sexDraft = {};
+const SEX_SCALE = {
+  erect: ["แข็งตัวแค่ไหน", "1 แทบไม่แข็ง", "5 แข็งเต็มที่ตลอด"],
+  stamina: ["อึดและคุมได้แค่ไหน", "1 เสร็จเร็วมาก", "5 คุมได้ตามต้องการ"],
+};
+function sexHtml() {
+  const t = today(), y = L.addDays(t, -1);
+  sexDay = sexDay || (new Date().getHours() >= 15 ? t : y);
+  const cur = state.sex[sexDay];
+  if (!sexDraft.d || sexDraft.d !== sexDay) sexDraft = { d: sexDay, erect: cur?.erect, stamina: cur?.stamina };
+  const fat = {};
+  for (const [d, list] of Object.entries(state.food)) if (list.length) fat[d] = L.dayTotals(list).f;
+  const ins = L.sexInsights(state.sex, state.checkins, fat, t);
+  const need = Math.max(0, 6 - ins.n);
+  const rate = (k) => `<span class="label">${SEX_SCALE[k][0]}</span><div class="rate" role="group" aria-label="${SEX_SCALE[k][0]}">${[1, 2, 3, 4, 5].map((v) =>
+    `<button data-rate="${k}" data-v="${v}" aria-pressed="${sexDraft[k] === v}">${v}</button>`).join("")}</div>
+    <p class="note" style="margin-top:-6px">${SEX_SCALE[k][1]} · ${SEX_SCALE[k][2]}</p>`;
+  return `<div class="grid2">
+    <div class="card">
+      <h3>บันทึกเซ็กส์</h3>
+      <p class="note">อยู่ในเครื่องนี้เท่านั้น ใช้หาว่าการนอน การซ้อม และอาหารแบบไหนทำให้ดีขึ้น วันที่ไม่มีเซ็กส์ไม่ต้องบันทึก</p>
+      <div class="seg" role="group" aria-label="วันที่">
+        <button data-sexday="${y}" aria-pressed="${sexDay === y}">เมื่อวาน</button><button data-sexday="${t}" aria-pressed="${sexDay === t}">วันนี้</button>
+      </div>
+      <div style="margin-top:10px">${rate("erect")}${rate("stamina")}</div>
+      <div class="row-actions"><button class="btn" id="sexSave">บันทึก</button>
+        ${cur ? `<button class="btn ghost" id="sexDel">ลบของ${sexDay === t ? "วันนี้" : "เมื่อวาน"}</button>` : ""}
+        <span id="sexOk" class="saved">${cur ? `บันทึกแล้ว ${cur.erect}/${cur.stamina}` : ""}</span></div>
+    </div>
+    <div class="card">
+      <h3>อะไรทำให้ดีขึ้น</h3>
+      ${ins.n ? `<p class="mono">${ins.n} ครั้งใน 90 วัน · แข็งตัวเฉลี่ย ${ins.erect} · อึดเฉลี่ย ${ins.stamina}</p>` : ""}
+      ${ins.comps.length ? ins.comps.map((c) => `<div class="cmpline"><b>${esc(c.t)}</b>
+          <span>${esc(c.a.name)} <span class="note">${c.a.n} ครั้ง</span></span><span class="mono">${c.a.avg}</span>
+          <span>${esc(c.b.name)} <span class="note">${c.b.n} ครั้ง</span></span><span class="mono">${c.b.avg}</span></div>`).join("") +
+          `<p class="note">คะแนน = เฉลี่ยแข็งตัวกับอึด (เต็ม 5) ต่างกันไม่ถึง 0.5 ถือว่ายังบอกไม่ได้ ข้อมูลยิ่งเยอะยิ่งแม่น</p>`
+        : `<p class="note">${need ? `บันทึกอีกอย่างน้อย ${need} ครั้ง` : "ยังมีข้อมูลไม่พอแยกกลุ่ม"} แอปจะเริ่มเทียบให้ เช่น คืนที่นอนพอกับนอนน้อย วันขากับวันอื่น และวันที่กินไขมันพอกับไม่พอ (ต้องมีฝั่งละ 3 ครั้งขึ้นไป) กรอกชั่วโมงนอนใน check-in ทุกเช้าด้วย</p>`}
+    </div>
+  </div>`;
+}
+function wireSex() {
+  document.querySelectorAll("[data-sexday]").forEach((b) => b.onclick = () => { sexDay = b.dataset.sexday; renderCheck(); });
+  document.querySelectorAll("[data-rate]").forEach((b) => b.onclick = () => {
+    sexDraft[b.dataset.rate] = Number(b.dataset.v);
+    b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  });
+  $("sexSave").onclick = async () => {
+    if (!sexDraft.erect || !sexDraft.stamina) { $("sexOk").className = "err"; $("sexOk").textContent = "เลือกคะแนนให้ครบทั้ง 2 ข้อ"; return; }
+    state.sex[sexDay] = { erect: sexDraft.erect, stamina: sexDraft.stamina };
+    await S.set("sex", state.sex);
+    renderCheck();
+  };
+  if ($("sexDel")) $("sexDel").onclick = async () => {
+    delete state.sex[sexDay];
+    sexDraft = {};
+    await S.set("sex", state.sex);
     renderCheck();
   };
 }
@@ -904,7 +1054,7 @@ function renderData() {
         <h3>ข้อมูลในเครื่องนี้</h3>
         <p><span class="mono">${days}</span> วันที่ซ้อม · <span class="mono">${sessions}</span> รายการท่า · <span class="mono">${state.body.length}</span> ครั้งที่ชั่งน้ำหนัก</p>
         <p class="note">เริ่มบล็อก ${fmtDate(state.settings.startDate)} · สำรองล่าสุด ${state.settings.lastExport ? new Date(state.settings.lastExport).toLocaleDateString("th-TH") : "ยังไม่เคย"}</p>
-        <p class="note">ข้อมูลอยู่ในเบราว์เซอร์ของเครื่องนี้ ถ้าล้างข้อมูลเว็บหรือเปลี่ยนเครื่องจะหาย ควร Export ทุกสัปดาห์</p>
+        <p class="note">ข้อมูลอยู่ในเบราว์เซอร์ของเครื่องนี้ ถ้าล้างข้อมูลเว็บหรือเปลี่ยนเครื่องจะหาย ควร Export ทุกสัปดาห์ ไฟล์มีบันทึกเซ็กส์และสุขภาพด้วย เก็บไว้ในที่ส่วนตัว อย่าส่งให้ใคร</p>
         ${state.photos?.length ? `<label class="checkline"><input type="checkbox" id="expPhotos"> รวมรูปความคืบหน้า ${state.photos.length} รูปในไฟล์ด้วย (ไฟล์ใหญ่ขึ้นราว ${Math.round(state.photos.length * 0.3)} MB เก็บไฟล์นี้ในที่ส่วนตัวเท่านั้น)</label>` : ""}
         <div class="row-actions"><button class="btn" id="exp">Export ไฟล์ JSON</button></div>
       </div>
