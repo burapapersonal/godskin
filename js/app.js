@@ -18,6 +18,8 @@ const state = {
   myfoods: [],    // user-added foods, same shape as FOODS, ids start with "my_"
   sex: {},        // date -> { erect, stamina } each 1–5
   done: {},       // date -> [exId] for items without sets (cardio, mobility)
+  notes: {},      // date -> { exId: { tags: [], text } }
+  cardio: {},     // date -> { exId | "extra": minutes }
   tab: "train",
   dayIdx: 0,
 };
@@ -55,6 +57,8 @@ async function boot() {
   state.myfoods = await S.get("myfoods", []);
   state.sex = await S.get("sex", {});
   state.done = await S.get("done", {});
+  state.notes = await S.get("notes", {});
+  state.cardio = await S.get("cardio", {});
   applyMotion();
   state.photos = await S.get("photos", []);   // [{ id, d, pose }]; images under "photo:<id>"
   if (!state.settings.startDate) {
@@ -171,6 +175,61 @@ function renderDays() {
 
 function hist(id) { return state.logs[id]?.history || []; }
 const isDone = (id, d = today()) => (state.done[d] || []).includes(id);
+
+// Per-exercise feedback. "pain" and "tooHeavy" hold the next suggestion at the same load.
+const NOTE_TAGS = [["easy", "สบาย"], ["good", "หนักกำลังดี"], ["tooHeavy", "หนักเกิน"], ["pain", "เจ็บ / บาดเจ็บ"], ["form", "ฟอร์มเพี้ยน"]];
+const tagName = (k) => NOTE_TAGS.find((t) => t[0] === k)?.[1] || k;
+const noteOn = (id, d = today()) => state.notes[d]?.[id];
+function lastNote(id) {
+  const ds = Object.keys(state.notes).filter((d) => d < today() && state.notes[d][id]).sort();
+  return ds.length ? { d: ds[ds.length - 1], ...state.notes[ds[ds.length - 1]][id] } : null;
+}
+const noteText = (n) => [...(n.tags || []).map(tagName), n.text].filter(Boolean).join(" · ");
+async function saveNote(id, patch) {
+  const d = today(), day = { ...(state.notes[d] || {}) };
+  const n = { tags: [], text: "", ...(day[id] || {}), ...patch };
+  if (!n.tags.length && !n.text) delete day[id]; else day[id] = n;
+  if (Object.keys(day).length) state.notes[d] = day; else delete state.notes[d];
+  await S.set("notes", state.notes);
+}
+
+// Cardio minutes: logged minutes, or the plan's minimum for days ticked before minutes existed.
+const CARDIO_GOAL = 150;
+function cardioMin(d) {
+  const logged = state.cardio[d] || {};
+  let m = Object.values(logged).reduce((a, b) => a + b, 0);
+  for (const id of state.done[d] || []) {
+    const e = DAYS.flatMap((x) => x.ex).find((x) => x.id === id && x.cardio);
+    if (e && logged[id] == null) m += e.lo;
+  }
+  return m;
+}
+function weekCardio() {
+  let m = 0;
+  for (let d = L.mondayOf(today()); d <= today(); d = L.addDays(d, 1)) m += cardioMin(d);
+  return m;
+}
+async function setCardio(id, min) {
+  const d = today(), day = { ...(state.cardio[d] || {}) };
+  if (min > 0) day[id] = min; else delete day[id];
+  if (Object.keys(day).length) state.cardio[d] = day; else delete state.cardio[d];
+  const done = new Set(state.done[d] || []);
+  if (id !== "extra") { if (min > 0) done.add(id); else done.delete(id); }
+  if (done.size) state.done[d] = [...done]; else delete state.done[d];
+  await S.set("cardio", state.cardio);
+  await S.set("done", state.done);
+}
+function cardioCard() {
+  const wk = weekCardio(), extra = state.cardio[today()]?.extra;
+  return `<div class="card cardio-card">
+    <div class="macro-h"><h3>คาร์ดิโอสัปดาห์นี้</h3><span class="mono">${wk} / ${CARDIO_GOAL} นาที</span></div>
+    <div class="dp-bar"><i style="width:${Math.min(100, (wk / CARDIO_GOAL) * 100)}%;background:var(--p-red)"></i></div>
+    <p class="note">นับรวมเดินชันในแผนกับเดินเร็วนอกยิม เดินเร็วจนหายใจแรงขึ้นแต่ยังพูดได้นับได้หมด</p>
+    <div class="field"><label for="cmExtra">เดินเร็ว/คาร์ดิโออื่นวันนี้</label>
+      <input type="number" id="cmExtra" min="0" max="300" inputmode="numeric" value="${extra ?? ""}" placeholder="0"><span>นาที</span>
+      <button class="btn ghost" data-cmin="extra">บันทึก</button></div>
+  </div>`;
+}
 // "Superset: A + B" searches for the first movement; "·" variants read better as plain words.
 const ytQuery = (n) => n.replace(/^Superset:\s*/, "").split(" + ")[0].replace(/[·()]/g, " ").replace(/\s+/g, " ").trim() + " proper form";
 // The day's exercises with the user's swaps applied.
@@ -197,7 +256,11 @@ function renderDay() {
   const mins = L.minutes(d, p, cut);
   let html = `<div class="dayhead"><div><div class="label">${d.th} · ${esc(p.name)}</div><h2>${esc(d.title)}</h2><div class="sub">${esc(d.sub)}</div></div>` +
     (mins ? `<span class="chip${mins > 90 ? " over" : ""}">≈ ${mins} นาที รวมวอร์ม</span>` : "") + `</div>`;
-  if (!d.ex.length) { v.innerHTML = html + `<div class="ex"><p>${esc(d.rest)}</p></div>`; return; }
+  if (!d.ex.length) {
+    v.innerHTML = html + `<div class="ex"><p>${esc(d.rest)}</p></div>` + cardioCard();
+    wireCardio(v);
+    return;
+  }
 
   html += `<div class="dayprog" id="dayprog"><div class="dp-bar"><i id="dpFill"></i></div><span id="dpText"></span></div>`;
   html += `<div class="exlist">`;
@@ -207,9 +270,17 @@ function renderDay() {
     const base = orig[i], alts = SWAPS[base.id] || [];
     const n = L.setsFor(ex, p, cut);
     const h = hist(ex.id);
-    const sg = L.suggest(ex, p, h, today());
     const past = h.filter((e) => e.d < today());
     const last = past[past.length - 1];
+    const prevNote = lastNote(ex.id);
+    let sg = L.suggest(ex, p, h, today());
+    // feedback from last time overrides an increase: hurt or too heavy means same load or lighter
+    const held = last && prevNote && prevNote.d === last.d && prevNote.tags?.some((t) => t === "pain" || t === "tooHeavy");
+    if (held) {
+      const pain = prevNote.tags.includes("pain");
+      sg = { ...sg, kind: "hold", tag: pain ? "ระวัง" : "คงน้ำหนัก", weight: pain ? Math.round(Math.min(...last.w) * 0.9 * 2) / 2 : Math.min(...last.w),
+        text: pain ? "ครั้งก่อนบันทึกว่าเจ็บ ลดน้ำหนักราว 10% เล่นช่วงที่ไม่เจ็บ ถ้ายังเจ็บอีกให้กดสลับท่า และเจ็บเกิน 1 สัปดาห์ควรพบแพทย์" : "ครั้งก่อนบันทึกว่าหนักเกิน ใช้น้ำหนักเดิมจนทำครบช่วงครั้งได้สบายขึ้น" };
+    }
     const cur = todayEntry(ex.id);
     const done = cur && cur.r.length >= n;
     const unit = ex.time ? `${ex.lo}–${ex.hi} นาที` : `${n} × ${ex.lo}–${ex.hi}`;
@@ -225,14 +296,17 @@ function renderDay() {
       <div class="rx"><span>${unit}</span>${rest}${ex.time ? "" : `<span>RIR ${p.rir}</span>`}</div>
       <p class="note">${esc(ex.note)}</p>` +
       (ex.setup ? `<p class="setup"><span class="label">ตั้งเครื่อง</span> ${esc(ex.setup)}</p>` : "") +
-      (ex.log === false ? `<div class="row-actions"><button class="btn${isDone(ex.id) ? "" : " ghost"}" data-done="${ex.id}" aria-pressed="${isDone(ex.id)}">${isDone(ex.id) ? "ทำแล้ว ✓" : "ทำเสร็จแล้ว"}</button></div>` : "") +
+      (ex.cardio ? `<div class="field"><input type="number" id="cm_${ex.id}" min="0" max="300" inputmode="numeric" value="${state.cardio[today()]?.[ex.id] ?? (isDone(ex.id) ? ex.lo : "")}" placeholder="${ex.lo}" aria-label="นาที"><span>นาที</span>
+        <button class="btn${isDone(ex.id) ? "" : " ghost"}" data-cmin="${ex.id}">${isDone(ex.id) ? "บันทึกแล้ว ✓" : "บันทึก"}</button></div>` :
+        ex.log === false ? `<div class="row-actions"><button class="btn${isDone(ex.id) ? "" : " ghost"}" data-done="${ex.id}" aria-pressed="${isDone(ex.id)}">${isDone(ex.id) ? "ทำแล้ว ✓" : "ทำเสร็จแล้ว"}</button></div>` : "") +
       (ex.log !== false ? `<details class="move"><summary>ดูท่า</summary>` +
         (MOVE_OF[ex.id] ? `<svg class="mv" data-move="${ex.id}" role="img" aria-label="ภาพเคลื่อนไหวท่า ${esc(ex.n)}"></svg>
           <p class="note">ภาพคร่าวๆ ให้เห็นทางเดินของท่า สีเทาคือท่าเริ่ม ขึ้นเร็ว 1 วินาที ลงช้า 1.5 วินาที แตะภาพเพื่อหยุดหรือเล่นต่อ รายละเอียดฟอร์มดูจากคลิปจริง</p>` : "") +
         `<a class="yt" href="https://www.youtube.com/results?search_query=${encodeURIComponent(ytQuery(ex.n))}" target="_blank" rel="noopener">ดูคลิปจริงบน YouTube ↗</a></details>` : "");
     if (ex.log !== false) {
       html += `<div class="sugg"><span class="tag ${sg.kind}">${esc(sg.tag)}</span><span>${esc(sg.text)}</span>` +
-        (last ? `<span class="last mono">ครั้งก่อน ${fmtDate(last.d)}: ${last.w.map((w, k) => w + "×" + last.r[k]).join(", ")}</span>` : "") + `</div>`;
+        (last ? `<span class="last mono">ครั้งก่อน ${fmtDate(last.d)}: ${last.w.map((w, k) => w + "×" + last.r[k]).join(", ")}</span>` : "") +
+        (prevNote ? `<span class="last">โน้ต ${fmtDate(prevNote.d)}: ${esc(noteText(prevNote))}</span>` : "") + `</div>`;
       html += `<div class="sets">`;
       for (let s = 0; s < n; s++) {
         const wv = cur?.w[s] ?? "", rv = cur?.r[s] ?? "";
@@ -243,6 +317,11 @@ function renderDay() {
       html += `</div><div class="row-actions">` +
         (ex.rest ? `<button class="btn ghost" data-rest="${ex.id}">เริ่มพัก</button>` : "") +
         `<span class="saved" id="ok_${ex.id}">${cur ? "บันทึกอัตโนมัติแล้ว" : ""}</span></div>`;
+      const nt = noteOn(ex.id);
+      html += `<details class="exnote"${nt ? " open" : ""}><summary>โน้ตวันนี้ <span class="note" id="ns_${ex.id}">${nt ? esc(noteText(nt)) : ""}</span></summary>
+        <div class="chips">${NOTE_TAGS.map(([k, t]) => `<button class="chipbtn${k === "pain" ? " pain" : ""}" data-note="${ex.id}" data-tag="${k}" aria-pressed="${!!nt?.tags?.includes(k)}">${t}</button>`).join("")}</div>
+        <input class="notein" data-notetext="${ex.id}" maxlength="200" value="${esc(nt?.text || "")}" placeholder="เช่น ไหล่ขวาตึงเซ็ต 3, เครื่องตัวใหม่หนักกว่าเดิม" aria-label="โน้ตท่านี้">
+      </details>`;
       if (h.length > 1) {
         html += `<details class="hist"><summary>ประวัติ ${h.length} ครั้ง</summary>${sparkline(h)}<table>` +
           h.slice().reverse().slice(0, 12).map((e) => `<tr><td>${fmtDate(e.d)}</td><td>W${e.wk ?? "-"}</td><td>${e.w.map((w, k) => w + "×" + e.r[k]).join("  ")}</td></tr>`).join("") +
@@ -251,7 +330,21 @@ function renderDay() {
     }
     html += `</article>`;
   });
-  v.innerHTML = html + `</div>`;
+  v.innerHTML = html + `</div>` + cardioCard();
+  wireCardio(v);
+
+  v.querySelectorAll("[data-tag]").forEach((b) => b.addEventListener("click", async () => {
+    const id = b.dataset.note, tags = new Set(noteOn(id)?.tags || []);
+    if (tags.has(b.dataset.tag)) tags.delete(b.dataset.tag); else tags.add(b.dataset.tag);
+    b.setAttribute("aria-pressed", String(tags.has(b.dataset.tag)));
+    await saveNote(id, { tags: [...tags] });
+    $("ns_" + id).textContent = noteOn(id) ? noteText(noteOn(id)) : "";
+  }));
+  v.querySelectorAll("[data-notetext]").forEach((inp) => inp.addEventListener("change", async () => {
+    const id = inp.dataset.notetext;
+    await saveNote(id, { text: inp.value.trim().slice(0, 200) });
+    $("ns_" + id).textContent = noteOn(id) ? noteText(noteOn(id)) : "";
+  }));
 
   v.querySelectorAll("input[data-ex]").forEach((inp) => {
     inp.addEventListener("input", () => scheduleSave(inp.dataset.ex));
@@ -285,6 +378,14 @@ function renderDay() {
     renderDay();
   }));
   updateProgress();
+}
+
+function wireCardio(v) {
+  v.querySelectorAll("[data-cmin]").forEach((b) => b.addEventListener("click", async () => {
+    const id = b.dataset.cmin, inp = $(id === "extra" ? "cmExtra" : "cm_" + id);
+    await setCardio(id, Math.max(0, Math.min(300, Math.round(Number(inp.value) || 0))));
+    renderDay();
+  }));
 }
 
 function updateProgress() {
@@ -819,13 +920,14 @@ function dayInfo(d, tg) {
   const ids = (e) => [e.id, ...(SWAPS[e.id] || [])];
   const doneEx = base.filter((e) => ids(e).some((id) => hist(id).some((h) => h.d === d)));
   const lifts = Object.entries(state.logs).flatMap(([id, r]) => r.history.filter((h) => h.d === d).map((h) => ({ id, ...h })));
-  const cardio = (state.done[d] || []).filter((id) => DAYS.some((x) => x.ex.some((e) => e.id === id && e.cardio)));
+  const cardio = cardioMin(d);
   const food = state.food[d] || [];
   const tot = food.length ? L.dayTotals(food) : null;
   const foodOk = tot && tg ? tot.p >= tg.pMin && tot.kcal >= tg.kcal * 0.85 : null;
   const ci = state.checkins[d];
   const ciCls = !ci ? null : L.redDay(ci) ? "r" : L.SIGNS.some((s) => ci[s.k]) ? "y" : "g";
   return { d, plan, ratio: base.length ? doneEx.length / base.length : 0, lifts, cardio, tot, foodOk, ci, ciCls,
+    notes: Object.entries(state.notes[d] || {}).map(([id, n]) => ({ id, ...n })),
     kg: state.body.find((e) => e.d === d)?.kg, sex: state.sex[d], photos: (state.photos || []).filter((p) => p.d === d).length,
     measure: state.measures.find((m) => m.d === d) };
 }
@@ -853,7 +955,7 @@ function renderCal() {
   }
   const inMonth = cells.filter((d) => d.startsWith(month) && d <= t).map((d) => dayInfo(d, tg));
   const trained = inMonth.filter((x) => x.lifts.length).length;
-  const cardioN = inMonth.filter((x) => x.cardio.length).length;
+  const cardioN = inMonth.reduce((a, x) => a + x.cardio, 0);
   const foodLogged = inMonth.filter((x) => x.tot), foodOk = foodLogged.filter((x) => x.foodOk).length;
   const sleeps = inMonth.map((x) => x.ci?.sleepH).filter((h) => h != null);
   const kgs = inMonth.filter((x) => x.kg != null);
@@ -866,7 +968,7 @@ function renderCal() {
     return `<button class="cal-d${d === t ? " today" : ""}${d === sel ? " sel" : ""}${future ? " future" : ""}" data-cal="${d}" style="--i:${i}" aria-label="${+d.slice(8)} ${TH_MONTH[m - 1]}">
       <span class="cal-n">${+d.slice(8)}</span>
       ${plateRing(x) || (x.plan.ex.length ? `<span class="cal-rest"></span>` : `<span class="cal-rest">พัก</span>`)}
-      <span class="cal-ic">${x.tot ? `<span class="ic ${x.foodOk ? "ok" : "low"}">${ICON.food}</span>` : ""}${x.cardio.length ? `<span class="ic heart">${ICON.heart}</span>` : ""}${x.ciCls ? `<i class="dot ${x.ciCls}"></i>` : ""}</span>
+      <span class="cal-ic">${x.tot ? `<span class="ic ${x.foodOk ? "ok" : "low"}">${ICON.food}</span>` : ""}${x.cardio ? `<span class="ic heart">${ICON.heart}</span>` : ""}${x.notes.some((n) => n.tags?.includes("pain")) ? `<span class="ic pain">!</span>` : ""}${x.ciCls ? `<i class="dot ${x.ciCls}"></i>` : ""}</span>
       ${x.kg != null ? `<span class="cal-w">${x.kg.toFixed(1)}</span>` : ""}
     </button>`;
   };
@@ -877,13 +979,14 @@ function renderCal() {
     <h3>${dt.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long" })}</h3>
     <p class="label">${esc(x.plan.title)}${sel > t ? " · ยังไม่ถึง" : ""}</p>
     ${x.lifts.length ? `<div class="cal-sec"><b>ซ้อม ${Math.round(x.ratio * 100)}%</b>${x.lifts.map((h) => `<div class="fitem"><span>${esc(exName(h.id))}</span><span class="mono">${h.w.map((w, k) => w + "×" + h.r[k]).join(" ")}</span></div>`).join("")}</div>` : sel <= t && x.plan.ex.length ? `<p class="note">ไม่ได้บันทึกการซ้อม</p>` : ""}
-    ${x.cardio.length ? `<div class="cal-sec"><b>คาร์ดิโอ</b> ${x.cardio.map((id) => esc(exName(id))).join(", ")} ✓</div>` : ""}
+    ${x.cardio ? `<div class="cal-sec"><b>คาร์ดิโอ</b> ${x.cardio} นาที</div>` : ""}
+    ${x.notes.length ? `<div class="cal-sec"><b>โน้ต</b>${x.notes.map((n) => `<div class="fitem"><span>${esc(exName(n.id))}</span><span class="${n.tags?.includes("pain") ? "err" : "note"}">${esc(noteText(n))}</span></div>`).join("")}</div>` : ""}
     ${x.tot ? `<div class="cal-sec"><b>อาหาร ${x.foodOk ? "ครบ" : "ยังไม่ถึงเป้า"}</b><p class="mono">${x.tot.kcal.toLocaleString()}${tg ? ` / ${tg.kcal.toLocaleString()}` : ""} kcal · P${Math.round(x.tot.p)}${tg ? `/${tg.pMin}` : ""} · C${Math.round(x.tot.c)} · F${Math.round(x.tot.f)}${tg ? `/${tg.fMin}` : ""}</p></div>` : ""}
     ${x.ci ? `<div class="cal-sec"><b>Check-in</b> <i class="dot ${x.ciCls}"></i> ${x.ci.sleepH != null ? `นอน ${x.ci.sleepH} ชม. · ` : ""}${L.SIGNS.filter((s) => x.ci[s.k]).map((s) => esc(s.t)).join(" · ") || "ปกติ"}</div>` : ""}
     ${x.sex ? `<div class="cal-sec"><b>เซ็กส์</b> แข็งตัว ${x.sex.erect}/5 · อึด ${x.sex.stamina}/5</div>` : ""}
     ${x.kg != null || x.measure ? `<div class="cal-sec"><b>ร่างกาย</b> ${x.kg != null ? `${x.kg.toFixed(1)} kg` : ""}${x.measure ? ` · แขน ${x.measure.arm ?? "-"} อก ${x.measure.chest ?? "-"} เอว ${x.measure.waist ?? "-"} cm` : ""}</div>` : ""}
     ${x.photos ? `<div class="cal-sec"><b>รูปความคืบหน้า</b> ${x.photos} รูป</div>` : ""}
-    ${!x.lifts.length && !x.tot && !x.ci && x.kg == null && sel <= t ? `<p class="note">วันนี้ยังไม่มีบันทึก</p>` : ""}
+    ${!x.lifts.length && !x.tot && !x.ci && x.kg == null && !x.cardio && sel <= t ? `<p class="note">วันนี้ยังไม่มีบันทึก</p>` : ""}
   </div>`;
 
   $("p-cal").innerHTML = `
@@ -894,7 +997,7 @@ function renderCal() {
     </div>
     <div class="cal-sum">
       <div><b>${trained}</b><span>วันซ้อม</span></div>
-      <div><b>${cardioN}</b><span>คาร์ดิโอ</span></div>
+      <div><b>${cardioN}</b><span>นาทีคาร์ดิโอ</span></div>
       <div><b>${foodOk}/${foodLogged.length}</b><span>กินครบ</span></div>
       <div><b>${sleeps.length ? (sleeps.reduce((a, b) => a + b, 0) / sleeps.length).toFixed(1) : "-"}</b><span>นอนเฉลี่ย</span></div>
       <div><b>${kgs.length >= 2 ? fmtK(kgs[kgs.length - 1].kg - kgs[0].kg) : "-"}</b><span>kg เดือนนี้</span></div>
@@ -906,7 +1009,7 @@ function renderCal() {
     <div class="cal-legend">
       <span>${plateRing({ lifts: [1], ratio: 0.7, plan: DAYS[0] })} ซ้อม (วงเต็ม = ครบทุกท่า)</span>
       <span><span class="ic ok">${ICON.food}</span> กินครบ</span><span><span class="ic low">${ICON.food}</span> ยังไม่ถึง</span>
-      <span><span class="ic heart">${ICON.heart}</span> คาร์ดิโอ</span>
+      <span><span class="ic heart">${ICON.heart}</span> คาร์ดิโอ</span><span><span class="ic pain">!</span> โน้ตว่าเจ็บ</span>
       <span><i class="dot g"></i><i class="dot y"></i><i class="dot r"></i> check-in</span>
       <span class="mono">77.4</span><span>น้ำหนัก</span>
     </div>

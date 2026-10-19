@@ -362,3 +362,12 @@ html.motion-off .confetti{display:none}
 .cal-sec{padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .cal-sec p{margin:2px 0 0}
 @media (max-width:380px){.cal-sum{grid-template-columns:repeat(3,1fr)}.cal-d{min-height:66px}}
+/* notes per exercise */
+details.exnote summary{cursor:pointer;font-size:13px;color:var(--muted)}
+details.exnote summary .note{margin-left:6px}
+details.exnote .notein{width:100%;margin-top:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;box-sizing:border-box}
+.chipbtn.pain[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:#fff}
+.ic.pain{color:var(--bad);font:700 11px/13px var(--f-mono);text-align:center}
+.cardio-card{margin-top:12px}
+.cardio-card h3{margin:0}
+.cardio-card .dp-bar{margin:8px 0}
