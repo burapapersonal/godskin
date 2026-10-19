@@ -1,7 +1,7 @@
 import { PHASES, DAYS, SWAPS, altFor, altName } from "./program.js";
 import * as L from "./logic.js";
 import * as S from "./store.js";
-import { FOODS, foodById as builtinFood, portion } from "./foods.js";
+import { FOODS, foodById as builtinFood, portion, baseQty } from "./foods.js";
 import { MOVE_OF, mountMove } from "./moves.js";
 
 const $ = (id) => document.getElementById(id);
@@ -393,7 +393,7 @@ function bulkGuard() {
 }
 
 const findFood = (id) => state.myfoods.find((f) => f.id === id) || builtinFood(id);
-const UNITS = ["ถุง", "ซอง", "ชิ้น", "แผ่น", "กล่อง", "ขวด", "ถ้วย", "จาน", "ลูก", "ฟอง", "g", "ml"];
+const UNITS = ["g", "ml", "ถุง", "ซอง", "ชิ้น", "แผ่น", "กล่อง", "ขวด", "ถ้วย", "จาน", "ลูก", "ฟอง"];
 const NA_MAX = 2000; // WHO daily sodium limit, mg
 let myDelArm = null;
 
@@ -518,6 +518,9 @@ function renderFood() {
           <optgroup label="รายการในแอป">${FOODS.map((f) => `<option value="${f.id}">${esc(f.n)}</option>`).join("")}</optgroup>
         </select>
       </div>
+      <div class="seg" id="fmode" role="group" aria-label="ใส่ปริมาณเป็น">
+        <button data-fmode="g" aria-pressed="false">กรัม</button><button data-fmode="pc" aria-pressed="false" id="fmodePc">หน่วย</button>
+      </div>
       <div class="field">
         <input type="number" id="fqty" min="0" step="any" inputmode="decimal" aria-label="ปริมาณ"><span id="funit"></span>
         <input type="time" id="ftime" value="${nowHM()}" aria-label="เวลาที่กิน">
@@ -528,7 +531,7 @@ function renderFood() {
       <details class="hist" id="myBox"${state.myOpen ? " open" : ""}><summary>เพิ่มอาหารของฉัน (จากฉลาก)</summary>
         <p class="note">ดูตาราง "ข้อมูลโภชนาการ" บนซอง กรอกค่าต่อหนึ่งหน่วยบริโภค เช่น 1 ถุง หรือ 100 g ชื่อซ้ำกับของเดิมจะทับค่าเดิม</p>
         <div class="field"><input id="cn" placeholder="ชื่ออาหาร เช่น ขนมจีบกุ้ง เซเว่น" aria-label="ชื่ออาหาร" style="width:100%"></div>
-        <div class="field"><label for="cper">ค่าต่อ</label><input type="number" id="cper" min="0" step="any" inputmode="decimal" value="1" aria-label="ปริมาณต่อหน่วยบริโภค">
+        <div class="field"><label for="cper">ค่าต่อ</label><input type="number" id="cper" min="0" step="any" inputmode="decimal" value="100" aria-label="ปริมาณต่อหน่วยบริโภค">
           <select id="cunit" aria-label="หน่วย" style="width:auto">${UNITS.map((u) => `<option>${u}</option>`).join("")}</select></div>
         <div class="field">
           <input type="number" id="ck" placeholder="kcal" aria-label="kcal" inputmode="decimal">
@@ -569,14 +572,28 @@ function renderFood() {
     </div>`;
 
   const fsel = $("fsel"), fqty = $("fqty");
+  // Grams or pieces: one global preference; foods without a piece size always use their own unit.
+  const modeFor = (f) => (f.pc && s.foodMode === "pc" ? "pc" : "g");
+  const unitFor = (f) => (modeFor(f) === "pc" ? f.pc[0] : f.unit);
   const syncFood = (resetQty) => {
-    const f = findFood(fsel.value);
-    if (resetQty) fqty.value = f.def;
-    $("funit").textContent = f.unit;
+    const f = findFood(fsel.value), mode = modeFor(f);
+    if (resetQty) fqty.value = mode === "pc" ? Math.max(1, Math.round(f.def / f.pc[1])) : f.def;
+    $("funit").textContent = unitFor(f);
+    $("fmode").hidden = !f.pc;
+    if (f.pc) $("fmodePc").textContent = `${f.pc[0]} (~${f.pc[1]} ${f.unit})`;
+    document.querySelectorAll("[data-fmode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.fmode === mode)));
     const q = Number(fqty.value) || 0;
-    const v = portion(f, q);
-    $("fprev").textContent = `${v.kcal} kcal · โปรตีน ${v.p} g · คาร์บ ${v.c} g · ไขมัน ${v.f} g${v.na != null ? ` · โซเดียม ${v.na} mg` : ""}`;
+    const v = portion(f, baseQty(f, q, mode));
+    $("fprev").textContent = `${mode === "pc" ? `≈ ${Math.round(baseQty(f, q, mode))} ${f.unit} · ` : ""}${v.kcal} kcal · โปรตีน ${v.p} g · คาร์บ ${v.c} g · ไขมัน ${v.f} g${v.na != null ? ` · โซเดียม ${v.na} mg` : ""}`;
   };
+  document.querySelectorAll("[data-fmode]").forEach((b) => b.onclick = async () => {
+    const f = findFood(fsel.value), from = modeFor(f), q = Number(fqty.value) || 0;
+    state.settings.foodMode = b.dataset.fmode;
+    await S.set("settings", state.settings);
+    const to = modeFor(f);
+    if (from !== to && f.pc) fqty.value = to === "pc" ? Math.round((q / f.pc[1]) * 2) / 2 || 1 : Math.round(q * f.pc[1]);
+    syncFood(false);
+  });
   if (s.lastFood && findFood(s.lastFood)) fsel.value = s.lastFood;
   syncFood(true);
   fsel.onchange = () => syncFood(true);
@@ -586,7 +603,7 @@ function renderFood() {
     if (!q || q <= 0) { $("fprev").textContent = "กรอกปริมาณมากกว่า 0"; return; }
     state.settings.lastFood = f.id;
     await S.set("settings", state.settings);
-    await addFood({ t: $("ftime").value || nowHM(), n: f.n, qty: q, unit: f.unit, fid: f.id, ...portion(f, q) });
+    await addFood({ t: $("ftime").value || nowHM(), n: f.n, qty: q, unit: unitFor(f), fid: f.id, ...portion(f, baseQty(f, q, modeFor(f))) });
   };
   document.querySelectorAll("[data-recent]").forEach((b) => b.onclick = () => {
     const e = recent[+b.dataset.recent];
@@ -603,6 +620,7 @@ function renderFood() {
     if (!n || !(k > 0) || !(per > 0)) { $("cerr").textContent = "ใส่ชื่อ ปริมาณ และ kcal อย่างน้อย"; return null; }
     const num = (id) => Math.max(0, Number($(id).value) || 0);
     const f = { n, unit: $("cunit").value, per, def: per, k: Math.round(k), p: num("cp"), c: num("cc"), f: num("cf") };
+    if ((f.unit === "g" || f.unit === "ml") && per !== 100) f.pc = ["หน่วยบริโภค", per];
     if ($("cna").value !== "") f.na = Math.round(num("cna"));
     return f;
   };

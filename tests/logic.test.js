@@ -71,7 +71,10 @@ test("calorie target for 77 kg, 183 cm, age 28 lands near 3,050", () => {
 test("rice 150 g + 6-egg omelette needs a 3-hour wait", async () => {
   const { FOODS, portion } = await import("../js/foods.js");
   const rice = portion(FOODS.find((f) => f.id === "rice"), 150);
-  const om = portion(FOODS.find((f) => f.id === "omelette"), 6);
+  const { baseQty } = await import("../js/foods.js");
+  const omF = FOODS.find((f) => f.id === "omelette");
+  const om = portion(omF, baseQty(omF, 6, "pc"));
+  assert.equal(baseQty(omF, 330, "g"), 330);
   const meals = L.groupMeals([{ t: "12:00", ...rice }, { t: "12:05", ...om }]);
   assert.equal(meals.length, 1);
   assert.equal(L.digestWait(meals[0]), 180);
