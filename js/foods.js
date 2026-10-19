@@ -14,6 +14,7 @@ export const FOODS = [
   { id: "mission_wrap", n: "แป้งแรป Mission Original", unit: "g", per: 100, def: 120, pc: ["แผ่น", 60], k: 300, p: 8, c: 50, f: 7, na: 940 },
   { id: "sweet_potato", n: "มันหวาน (ต้ม)", unit: "g", per: 100, def: 150, k: 86, p: 1.6, c: 20, f: 0.1 },
   { id: "banana", n: "กล้วยหอม", unit: "g", per: 100, def: 120, pc: ["ลูก", 120], k: 89, p: 1.1, c: 22.8, f: 0.3 },
+  { id: "honey", n: "น้ำผึ้ง", unit: "g", per: 100, def: 21, pc: ["ช้อนโต๊ะ", 21], k: 304, p: 0.3, c: 82.4, f: 0 },
   { id: "egg", n: "ไข่ไก่ ต้ม/ดิบ", unit: "g", per: 100, def: 110, pc: ["ฟอง", 55], k: 143, p: 12.6, c: 0.7, f: 9.5 },
   { id: "omelette", n: "ไข่เจียว รวมน้ำมันที่อม", unit: "g", per: 100, def: 165, pc: ["ฟอง", 55], k: 209, p: 11.5, c: 0.9, f: 17.3 },
   { id: "fried_egg", n: "ไข่ดาว", unit: "g", per: 100, def: 55, pc: ["ฟอง", 55], k: 182, p: 11.5, c: 0.7, f: 14.5 },
