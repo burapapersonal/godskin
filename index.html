@@ -33,8 +33,10 @@
       <div class="weeks" id="weeks" role="group" aria-label="สัปดาห์ของบล็อก"></div>
       <div class="phase"><b id="phaseName"></b><span id="phaseDesc"></span></div>
     </div>
+    <div class="weekask" id="weekAsk" hidden></div>
     <nav class="tabs" role="tablist">
       <button role="tab" id="tab-train" data-tab="train">ซ้อม</button>
+      <button role="tab" id="tab-cal" data-tab="cal">ปฏิทิน</button>
       <button role="tab" id="tab-goals" data-tab="goals">เป้าหมาย</button>
       <button role="tab" id="tab-food" data-tab="food">อาหาร</button>
       <button role="tab" id="tab-body" data-tab="body">น้ำหนักตัว</button>
@@ -52,6 +54,7 @@
     <div id="dayView"></div>
   </section>
 
+  <section id="p-cal" class="page" data-page="cal" hidden></section>
   <section id="p-goals" class="page" data-page="goals" hidden></section>
   <section id="p-food" class="page" data-page="food" hidden></section>
   <section id="p-body" class="page" data-page="body" hidden></section>

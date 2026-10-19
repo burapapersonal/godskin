@@ -53,7 +53,7 @@ export async function persist() {
   try { return navigator.storage?.persist ? await navigator.storage.persist() : false; } catch { return false; }
 }
 
-export const KEYS = ["logs", "settings", "body", "checkins", "food", "measures", "myfoods", "sex"];
+export const KEYS = ["logs", "settings", "body", "checkins", "food", "measures", "myfoods", "sex", "done"];
 
 export async function exportAll() {
   const out = { app: "godskin", version: 1, exportedAt: new Date().toISOString() };
@@ -86,6 +86,8 @@ export function mergeData(cur, inc) {
   return {
     myfoods: [...myMap.values()],
     sex: { ...(cur.sex || {}), ...(inc.sex || {}) },
+    done: Object.fromEntries([...new Set([...Object.keys(cur.done || {}), ...Object.keys(inc.done || {})])]
+      .map((d) => [d, [...new Set([...(cur.done?.[d] || []), ...(inc.done?.[d] || [])])]])),
     measures: [...mMap.values()].sort((a, b) => (a.d < b.d ? -1 : 1)),
     food,
     logs,

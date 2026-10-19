@@ -130,16 +130,22 @@ export function bmr(kg, cm, age) {
 
 // Daily targets for a lean bulk on this 6-day program:
 // activity factor 1.55, +300 kcal surplus, protein 2.0 g/kg, fat 1.0 g/kg, carbs fill the rest.
-export const ACTIVITY = 1.55;
+// Daily movement outside the gym, on top of ~1 h of lifting six days a week.
+export const ACTIVITY = {
+  low: { f: 1.4, name: "ขยับน้อย", desc: "นั่งทำงาน เดินไม่ถึง 5,000 ก้าว/วัน" },
+  mid: { f: 1.55, name: "ปานกลาง", desc: "เดิน 5,000–10,000 ก้าว/วัน" },
+  high: { f: 1.7, name: "ขยับเยอะ", desc: "ยืนหรือเดินทั้งวัน เกิน 10,000 ก้าว/วัน" },
+};
 export const SURPLUS = 300;
-export function targets(kg, cm, age, surplus = SURPLUS) {
-  const tdee = Math.round(bmr(kg, cm, age) * ACTIVITY);
+export function targets(kg, cm, age, surplus = SURPLUS, activity = ACTIVITY.mid.f) {
+  const tdee = Math.round(bmr(kg, cm, age) * activity);
   const kcal = Math.round((tdee + surplus) / 50) * 50;
   const p = Math.round(kg * 2.0);
   const f = Math.round(kg * 1.0);
   const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
   // Floors: protein gains flatten past ~1.6 g/kg; fat below ~0.8 g/kg for days at a time drags testosterone.
-  return { tdee, kcal, p, c, f, pMin: Math.round(kg * 1.6), fMin: Math.round(kg * 0.8) };
+  // Carbs fill whatever is left; 3 g/kg covers lifting, and above that carbs and fat trade freely.
+  return { tdee, kcal, p, c, f, pMin: Math.round(kg * 1.6), fMin: Math.round(kg * 0.8), cMin: Math.min(c, Math.round(kg * 3)) };
 }
 
 const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };

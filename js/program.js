@@ -37,6 +37,8 @@ export const DAYS = [
     { id: "str_arm", n: "Straight-Arm Cable Pulldown", s: 2, lo: 12, hi: 15, rest: 60, inc: 2.5,
       note: "แขนตึงเกือบตรง กดบาร์ลงมาถึงต้นขา ใช้ปีกล้วนๆ",
       setup: "รอกสูงสุด ใช้บาร์ตรงหรือเชือก ถอยหลัง 1 ก้าว โน้มตัวไปหน้าเล็กน้อย" },
+    { id: "z2_short", n: "Zone 2 หลังเวท", s: 1, lo: 15, hi: 20, rest: 0, inc: 0, time: true, log: false, cardio: true,
+      note: "เดินชันบนลู่ 15–20 นาที หายใจทางจมูกได้ ไม่ต้องเหนื่อย ช่วยหัวใจและหลอดเลือด ซึ่งช่วยเรื่องการแข็งตัวด้วย วันไหนหมดแรงข้ามได้" },
   ] },
   { dow: 2, code: "A", th: "อ.", title: "Legs A", sub: "ขา เน้นหน้าขา + น่อง + core", pc: "--p-blue", ex: [
     { id: "smith_squat", n: "Smith Machine Squat", s: 3, lo: 6, hi: 10, rest: 180, inc: 5,
@@ -84,7 +86,7 @@ export const DAYS = [
       setup: "ถ้าเครื่องมีที่วางศอก (captain's chair) ใช้แบบนั้น ไหล่ขวาไม่ต้องรับน้ำหนักตัว ถ้าเป็นบาร์โหน ใช้สายรัดข้อมือถ้ามือหลุดก่อนท้องล้า และถ้าไหล่ขวาเจ็บตอนโหน เปลี่ยนไปทำ Cable Crunch แทน" },
   ] },
   { dow: 4, code: "R", th: "พฤ.", title: "Recovery + Core", sub: "Zone 2 + mobility + core เบา", pc: "--p-green", ex: [
-    { id: "z2", n: "Incline Walk Zone 2", s: 1, lo: 30, hi: 40, rest: 0, inc: 0, time: true, log: false,
+    { id: "z2", n: "Incline Walk Zone 2", s: 1, lo: 30, hi: 40, rest: 0, inc: 0, time: true, log: false, cardio: true,
       note: "30–40 นาที ลู่วิ่งชันราว 8–12% ยังพูดเป็นประโยคได้ ไม่วิ่ง ถ้าไม่มีลู่ชัน เดินเร็วข้างนอกแทน" },
     { id: "mob", n: "Mobility: ไหล่ + สะโพก", s: 1, lo: 10, hi: 10, rest: 0, inc: 0, time: true, log: false,
       note: "ยืนทำทั้งหมด: Band dislocate, หมุนลำตัวยืนพิงกำแพง, ยืดหน้าสะโพกแบบก้าวขาจับเสา, เหวี่ยงขาหน้า-หลัง-ข้าง ท่าละ 2 นาที" },
@@ -117,6 +119,8 @@ export const DAYS = [
       setup: "รอกระดับอกถึงไหล่ตอนนั่ง (สูงกว่าแถว row สองมือ) ใช้บาร์ยาวหรือเชือก" },
     { id: "lat_raise_db", n: "DB Lateral Raise", s: 3, lo: 15, hi: 20, rest: 60, inc: 1,
       note: "ไหล่ข้างครั้งที่ 2 ของสัปดาห์ ยกถึงระดับไหล่ ไม่เหวี่ยง" },
+    { id: "z2_short", n: "Zone 2 หลังเวท", s: 1, lo: 15, hi: 20, rest: 0, inc: 0, time: true, log: false, cardio: true,
+      note: "เดินชันบนลู่ 15–20 นาที หายใจทางจมูกได้ ไม่ต้องเหนื่อย ช่วยหัวใจและหลอดเลือด ซึ่งช่วยเรื่องการแข็งตัวด้วย วันไหนหมดแรงข้ามได้" },
   ] },
   { dow: 6, code: "B", th: "ส.", title: "Legs B + Arms", sub: "หลังขา ก้น + แขน pump", pc: "--p-blue", ex: [
     { id: "rdl", n: "DB Romanian Deadlift", s: 3, lo: 8, hi: 10, rest: 150, inc: 2,

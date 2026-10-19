@@ -17,6 +17,7 @@ const state = {
   measures: [],   // [{ d, arm, chest, waist }] in cm
   myfoods: [],    // user-added foods, same shape as FOODS, ids start with "my_"
   sex: {},        // date -> { erect, stamina } each 1–5
+  done: {},       // date -> [exId] for items without sets (cardio, mobility)
   tab: "train",
   dayIdx: 0,
 };
@@ -24,6 +25,24 @@ const today = () => L.isoDate();
 const week = () => L.weekFor(state.settings.startDate, today());
 const phase = () => PHASES[week()];
 const cutOne = () => L.needsCut(state.checkins, today());
+
+/* ---------------- motion ---------------- */
+// on: animate even when the phone asks for reduced motion (the user turned this on in the app);
+// auto: follow the phone; off: no animation at all.
+function applyMotion() {
+  const m = state.settings.motion || "on";
+  document.documentElement.classList.toggle("motion-on", m === "on");
+  document.documentElement.classList.toggle("motion-off", m === "off");
+}
+
+/* small symbols shared by the day chips and the calendar */
+const ICON = {
+  heart: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path class="pulse" d="M5 11h3l1.5-3 3 6 1.5-3H19"/></svg>`,
+  food: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1-3 4-3 7h3v11"/></svg>`,
+  scale: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M8 9a5 5 0 0 1 8 0l-3 3"/></svg>`,
+  moon: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10z"/></svg>`,
+  cam: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
+};
 
 /* ---------------- boot ---------------- */
 async function boot() {
@@ -35,15 +54,18 @@ async function boot() {
   state.measures = await S.get("measures", []);
   state.myfoods = await S.get("myfoods", []);
   state.sex = await S.get("sex", {});
+  state.done = await S.get("done", {});
+  applyMotion();
   state.photos = await S.get("photos", []);   // [{ id, d, pose }]; images under "photo:<id>"
   if (!state.settings.startDate) {
     state.settings.startDate = L.startForWeek(1, today());
+    state.settings.startAuto = true;
     await S.set("settings", state.settings);
   }
   const dow = new Date().getDay();
   state.dayIdx = Math.max(0, DAYS.findIndex((d) => d.dow === dow));
   const hash = location.hash.slice(1);
-  if (["train", "goals", "food", "body", "check", "rules", "data"].includes(hash)) state.tab = hash;
+  if (["train", "cal", "goals", "food", "body", "check", "rules", "data"].includes(hash)) state.tab = hash;
 
   document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
     state.tab = b.dataset.tab;
@@ -67,7 +89,7 @@ function renderAll() {
 function renderTabs() {
   document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === state.tab));
   document.querySelectorAll("[data-page]").forEach((p) => (p.hidden = p.dataset.page !== state.tab));
-  ({ train: renderTrain, goals: renderGoals, food: renderFood, body: renderBody, check: renderCheck, data: renderData, rules: () => {} })[state.tab]();
+  ({ train: renderTrain, cal: renderCal, goals: renderGoals, food: renderFood, body: renderBody, check: renderCheck, data: renderData, rules: () => {} })[state.tab]();
 }
 
 /* ---------------- week strip ---------------- */
@@ -81,15 +103,37 @@ function renderWeeks() {
     b.textContent = i;
     b.title = `ตั้งให้สัปดาห์นี้เป็นสัปดาห์ ${i}`;
     b.setAttribute("aria-pressed", i === cur);
-    b.onclick = async () => {
-      state.settings.startDate = L.startForWeek(i, today());
-      await S.set("settings", state.settings);
-      renderAll();
-    };
+    b.onclick = () => askWeek(i);
     el.appendChild(b);
   }
   $("phaseName").textContent = phase().name;
-  $("phaseDesc").textContent = phase().desc;
+  $("phaseDesc").textContent = `${phase().desc} · เริ่มบล็อก ${fmtDate(state.settings.startDate)}`;
+}
+// Weeks with at least one logged set, counted back from today.
+function trainedWeeks() {
+  const days = new Set(Object.values(state.logs).flatMap((r) => r.history.map((h) => L.mondayOf(h.d))));
+  return days.size;
+}
+function askWeek(i) {
+  const box = $("weekAsk"), cur = week();
+  if (i === cur) { box.hidden = true; return; }
+  const warn = [];
+  const tw = trainedWeeks();
+  if (i >= 3 && cur <= 2) warn.push(tw < 2 ? `ซ้อมจริงมาแค่ ${tw} สัปดาห์ ข้ามช่วง Re-entry หลังขลิบเร็วไป น้ำหนักจะขึ้นเร็วเกินกว่าแผลและข้อต่อจะรับไหว` : "ออกจากช่วง Re-entry: RIR ลดลงและเริ่มเพิ่มน้ำหนักเต็มที่");
+  if (i === 8) warn.push("สัปดาห์ 8 คือ deload เซ็ตลดครึ่งทุกท่า");
+  if (i < cur) warn.push("ย้อนสัปดาห์: ประวัติการซ้อมไม่หาย แต่ RIR และสัปดาห์ deload จะนับใหม่");
+  box.innerHTML = `<p><b>ตั้งให้สัปดาห์นี้เป็นสัปดาห์ ${i}?</b> บล็อกจะนับเริ่มจาก ${fmtDate(L.startForWeek(i, today()))}</p>` +
+    warn.map((w) => `<p class="${i >= 3 && cur <= 2 && tw < 2 && w === warn[0] ? "err" : "note"}">${w}</p>`).join("") +
+    `<div class="row-actions"><button class="btn" id="weekYes">ยืนยัน</button><button class="btn ghost" id="weekNo">ยกเลิก</button></div>`;
+  box.hidden = false;
+  $("weekNo").onclick = () => { box.hidden = true; };
+  $("weekYes").onclick = async () => {
+    state.settings.startDate = L.startForWeek(i, today());
+    state.settings.startAuto = false;
+    await S.set("settings", state.settings);
+    box.hidden = true;
+    renderAll();
+  };
 }
 
 /* ---------------- train ---------------- */
@@ -118,13 +162,15 @@ function renderDays() {
     b.id = "day" + i;
     b.setAttribute("aria-pressed", i === state.dayIdx);
     b.style.setProperty("--pc", `var(${d.pc})`);
-    b.innerHTML = `<span class="plate">${d.code}</span><span class="dn">${d.th}</span><small>${esc(d.title)}</small>`;
+    b.innerHTML = `<span class="plate">${d.code}</span><span class="dn">${d.th}</span><small>${esc(d.title)}</small>` +
+      (d.ex.some((e) => e.cardio) ? `<span class="cardio" title="มีคาร์ดิโอ">${ICON.heart}</span>` : "");
     b.onclick = () => { state.dayIdx = i; renderDays(); renderDay(); };
     el.appendChild(b);
   });
 }
 
 function hist(id) { return state.logs[id]?.history || []; }
+const isDone = (id, d = today()) => (state.done[d] || []).includes(id);
 // "Superset: A + B" searches for the first movement; "·" variants read better as plain words.
 const ytQuery = (n) => n.replace(/^Superset:\s*/, "").split(" + ")[0].replace(/[·()]/g, " ").replace(/\s+/g, " ").trim() + " proper form";
 // The day's exercises with the user's swaps applied.
@@ -179,6 +225,7 @@ function renderDay() {
       <div class="rx"><span>${unit}</span>${rest}${ex.time ? "" : `<span>RIR ${p.rir}</span>`}</div>
       <p class="note">${esc(ex.note)}</p>` +
       (ex.setup ? `<p class="setup"><span class="label">ตั้งเครื่อง</span> ${esc(ex.setup)}</p>` : "") +
+      (ex.log === false ? `<div class="row-actions"><button class="btn${isDone(ex.id) ? "" : " ghost"}" data-done="${ex.id}" aria-pressed="${isDone(ex.id)}">${isDone(ex.id) ? "ทำแล้ว ✓" : "ทำเสร็จแล้ว"}</button></div>` : "") +
       (ex.log !== false ? `<details class="move"><summary>ดูท่า</summary>` +
         (MOVE_OF[ex.id] ? `<svg class="mv" data-move="${ex.id}" role="img" aria-label="ภาพเคลื่อนไหวท่า ${esc(ex.n)}"></svg>
           <p class="note">ภาพคร่าวๆ ให้เห็นทางเดินของท่า สีเทาคือท่าเริ่ม ขึ้นเร็ว 1 วินาที ลงช้า 1.5 วินาที แตะภาพเพื่อหยุดหรือเล่นต่อ รายละเอียดฟอร์มดูจากคลิปจริง</p>` : "") +
@@ -213,6 +260,14 @@ function renderDay() {
     });
   });
   v.querySelectorAll("[data-rest]").forEach((b) => b.addEventListener("click", () => startRest(b.dataset.rest)));
+  v.querySelectorAll("[data-done]").forEach((b) => b.addEventListener("click", async () => {
+    const d = today(), id = b.dataset.done, list = new Set(state.done[d] || []);
+    if (list.has(id)) list.delete(id); else list.add(id);
+    state.done[d] = [...list];
+    if (!list.size) delete state.done[d];
+    await S.set("done", state.done);
+    renderDay();
+  }));
   v.querySelectorAll("details.move").forEach((dt) => dt.addEventListener("toggle", () => {
     const svg = dt.querySelector("svg[data-move]");
     if (dt.open && svg) mountMove(svg, svg.dataset.move);
@@ -242,9 +297,69 @@ function updateProgress() {
   // let the bar paint at its old width first so the change animates
   requestAnimationFrame(() => { $("dpFill").style.width = (done / loggable.length) * 100 + "%"; });
   $("dpText").textContent = all ? "ครบทุกท่า จบวัน" : `${done}/${loggable.length} ท่า`;
-  if (all && !box.classList.contains("complete") && box.dataset.ready) navigator.vibrate?.([60, 40, 60, 40, 120]);
+  if (all && !box.classList.contains("complete") && box.dataset.ready) {
+    navigator.vibrate?.([60, 40, 60, 40, 120]);
+    if (state.settings.finishDay !== today()) showFinish(d);
+  }
   box.classList.toggle("complete", all);
   box.dataset.ready = "1";
+}
+
+// Whole-day finish: plates load onto a bar, the day's numbers count up, confetti in plate colours.
+async function showFinish(d) {
+  state.settings.finishDay = today();
+  await S.set("settings", state.settings);
+  const ex = dayEx(d).filter((e) => e.log !== false);
+  let sets = 0, vol = 0, topped = 0;
+  for (const e of ex) {
+    const h = todayEntry(e.id);
+    if (!h) continue;
+    sets += h.r.length;
+    vol += h.w.reduce((a, w, k) => a + w * h.r[k], 0);
+    if (h.r.every((r) => r >= e.hi)) topped++;
+  }
+  const cardio = d.ex.find((e) => e.cardio && !isDone(e.id));
+  const colors = ["--p-red", "--p-blue", "--p-yellow", "--p-green"];
+  const el = document.createElement("div");
+  el.className = "finish";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-label", "จบวัน");
+  el.innerHTML = `<div class="confetti" aria-hidden="true">${Array.from({ length: 36 }, (_, i) =>
+      `<i style="--x:${(i * 37) % 100}vw;--d:${(i % 7) * 90}ms;--r:${(i * 53) % 360}deg;--c:var(${colors[i % 4]})"></i>`).join("")}</div>
+    <div class="fin-card">
+      <svg class="fin-bar" viewBox="0 0 240 96" aria-hidden="true">
+        <line class="fb-bar" x1="8" y1="48" x2="232" y2="48"/>
+        <rect class="fb-col" x="62" y="38" width="6" height="20" rx="2"/><rect class="fb-col" x="172" y="38" width="6" height="20" rx="2"/>
+        <g class="fb-l"><rect x="44" y="12" width="14" height="72" rx="3" style="fill:var(--p-red)"/><rect x="28" y="20" width="12" height="56" rx="3" style="fill:var(--p-blue)"/><rect x="14" y="28" width="10" height="40" rx="3" style="fill:var(--p-yellow)"/></g>
+        <g class="fb-r"><rect x="182" y="12" width="14" height="72" rx="3" style="fill:var(--p-red)"/><rect x="200" y="20" width="12" height="56" rx="3" style="fill:var(--p-blue)"/><rect x="216" y="28" width="10" height="40" rx="3" style="fill:var(--p-yellow)"/></g>
+        <path class="fb-check" d="M100 50l14 14 28-30" pathLength="1"/>
+      </svg>
+      <h2>จบวันแล้ว</h2>
+      <p class="label">${esc(d.title)} · สัปดาห์ ${week()}</p>
+      <div class="fin-stats">
+        <div><b data-count="${ex.length}">0</b><span>ท่า</span></div>
+        <div><b data-count="${sets}">0</b><span>เซ็ต</span></div>
+        <div><b data-count="${Math.round(vol)}">0</b><span>kg รวม</span></div>
+      </div>
+      ${topped ? `<p>แตะเพดานครบ <b>${topped}</b> ท่า ครั้งหน้าแอปจะให้เพิ่มน้ำหนัก</p>` : ""}
+      ${cardio ? `<p class="note">ยังเหลือ ${esc(cardio.n)} ${cardio.lo}–${cardio.hi} นาที ถ้ายังไหว</p>` : ""}
+      <p class="note">กินมื้อหลังซ้อมภายใน 1–2 ชม.: ข้าว + โปรตีน 35–40 g แล้วพักให้พอ</p>
+      <button class="btn" id="finOk">เยี่ยม</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelectorAll("[data-count]").forEach((b) => {
+    const to = Number(b.dataset.count), t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / 900);
+      b.textContent = Math.round(to * (1 - (1 - k) ** 3)).toLocaleString();
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+  const close = () => { el.classList.add("out"); setTimeout(() => el.remove(), 250); };
+  $("finOk").onclick = close;
+  el.addEventListener("click", (e) => { if (e.target === el) close(); });
+  $("finOk").focus();
 }
 
 // Celebrate once per exercise per day when every set reaches the top of the rep range.
@@ -285,6 +400,14 @@ async function saveExercise(id) {
     const wn = wv === "" ? (sg.weight ?? 0) : Number(wv);
     if (isNaN(wn) || isNaN(Number(rv))) { bad = true; continue; }
     w.push(wn); r.push(Number(rv));
+  }
+  // The block starts the week training really starts, however long the app sat unused before.
+  if (state.settings.startAuto && r.length) {
+    const earlier = Object.values(state.logs).some((x) => x.history.some((h) => h.d < today()));
+    if (!earlier) state.settings.startDate = L.startForWeek(1, today());
+    state.settings.startAuto = false;
+    await S.set("settings", state.settings);
+    renderWeeks();
   }
   const rec = state.logs[id] || { history: [] };
   rec.history = rec.history.filter((h) => h.d !== today());
@@ -413,13 +536,21 @@ function bar(label, have, goal, unit, min) {
     <div class="dp-bar"><i style="width:${pct}%;${over ? "background:var(--warn)" : ""}"></i></div></div>`;
 }
 
+// Today's calorie and macro targets, or null until the birth date is set.
+function targetsNow() {
+  const s = state.settings, age = s.dob ? L.ageOn(s.dob, today()) : s.age;
+  const act = L.ACTIVITY[s.activity] || L.ACTIVITY.mid;
+  return age ? L.targets(currentKg().kg, s.height || 183, age, bulkMode().surplus, act.f) : null;
+}
+
 function renderFood() {
   const d = today(), s = state.settings;
   const { kg, src } = currentKg();
   const cm = s.height || 183;
   const age = s.dob ? L.ageOn(s.dob, d) : s.age;
   const mode = bulkMode();
-  const tg = age ? L.targets(kg, cm, age, mode.surplus) : null;
+  const act = L.ACTIVITY[s.activity] || L.ACTIVITY.mid;
+  const tg = targetsNow();
   const entries = state.food[d] || [];
   const tot = L.dayTotals(entries);
   const naKnown = entries.filter((e) => e.na != null);
@@ -473,13 +604,18 @@ function renderFood() {
         <div class="seg" role="group" aria-label="โหมด bulk">
           ${Object.entries(L.BULK).map(([k, b]) => `<button id="bulk-${k}" data-bulk="${k}" aria-pressed="${b === mode}">${b.name} +${b.surplus}</button>`).join("")}
         </div>
+        <span class="label" style="display:block;margin-top:10px">นอกเวลาซ้อม ขยับตัวแค่ไหน</span>
+        <div class="seg" role="group" aria-label="ระดับกิจกรรม">
+          ${Object.entries(L.ACTIVITY).map(([k, a]) => `<button data-act="${k}" aria-pressed="${a === act}">${a.name}</button>`).join("")}
+        </div>
+        <p class="note">${act.desc} · ไม่แน่ใจให้เลือกขยับน้อยไว้ก่อน แล้วดูน้ำหนักตัว 2 สัปดาห์</p>
         <p class="note">${mode === L.BULK.size
           ? `Size: น้ำหนักขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ ตัวใหญ่เร็วกว่า แต่ไขมันขึ้นด้วย แอปเฝ้าเอวและ check-in เรื่องเพศไว้ให้`
           : `Lean: น้ำหนักขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ ไขมันขึ้นน้อย เหมาะกับช่วง Re-entry`}</p>
         ${mode === L.BULK.size && week() <= 2 ? `<div class="banner"><b>ยังอยู่ช่วง Re-entry</b> ซ้อมเบาอยู่ ส่วนเกินที่มากขึ้นจะกลายเป็นไขมันมากกว่า แนะนำให้เริ่ม Size ตั้งแต่สัปดาห์ 3</div>` : ""}
         ${mode === L.BULK.size && guard.length ? `<div class="banner bad"><b>ควรกลับไปโหมด Lean</b> ${guard.join(" · ")}</div>` : ""}
         ${tg ? `<div class="big">${tg.kcal.toLocaleString()} kcal</div>
-          <p class="mono">โปรตีน ${tg.pMin}–${tg.p} g · คาร์บ ${tg.c} g · ไขมัน ${tg.fMin}–${tg.f} g</p>
+          <p class="mono">โปรตีน ${tg.pMin}–${tg.p} g · คาร์บ ${tg.cMin}–${tg.c} g · ไขมัน ${tg.fMin}–${tg.f} g</p>
           <p class="note">ใช้น้ำหนัก ${kg.toFixed(1)} kg (${src}) · ใช้พลังงานต่อวัน ~${tg.tdee.toLocaleString()} kcal + ส่วนเกิน ${mode.surplus} kcal สำหรับสร้างกล้าม</p>
           ${trendTip ? `<p class="note">${trendTip}</p>` : ""}`
         : `<p class="note">กรอกวันเกิดเพื่อคำนวณให้ตรงตัว ระหว่างนี้ใช้ช่วง 2,900–3,100 kcal</p>`}
@@ -496,12 +632,12 @@ function renderFood() {
       <div class="macros">
         ${bar("พลังงาน", tot.kcal, tg?.kcal ?? 3000, "kcal")}
         ${bar("โปรตีน", tot.p, tg?.p ?? 154, "g", tg?.pMin ?? 123)}
-        ${bar("คาร์บ", tot.c, tg?.c ?? 400, "g")}
+        ${bar("คาร์บ", tot.c, tg?.c ?? 400, "g", tg?.cMin ?? 230)}
         ${bar("ไขมัน", tot.f, tg?.f ?? 77, "g", tg?.fMin ?? 62)}
       </div>
       ${naKnown.length ? `<p class="mono${na > NA_MAX ? " err" : ""}">โซเดียม ${na.toLocaleString()} / ${NA_MAX.toLocaleString()} mg${naKnown.length < entries.length ? ` <span class="note">(นับเฉพาะ ${naKnown.length} รายการที่รู้ค่า)</span>` : ""}</p>` : ""}
       ${na > NA_MAX ? `<div class="banner"><b>เค็มเกินวันละ ${NA_MAX.toLocaleString()} mg</b> ดื่มน้ำเพิ่ม มื้อที่เหลือเลือกของไม่ปรุงรส ถ้าเค็มแบบนี้ทุกวัน ความดันขึ้นซึ่งกระทบหลอดเลือดและการแข็งตัว</div>` : ""}
-      <p class="note">แต่ละวันขาดเกินได้ โปรตีนถึงขั้นต่ำก็พอ พลังงานดูเฉลี่ยทั้งสัปดาห์จากกราฟน้ำหนักตัว</p>
+      <p class="note">ตัวเลขแรกคือขั้นต่ำ ถึงแล้วพอ คาร์บกับไขมันแลกกันได้ (ไขมัน 1 g ≈ คาร์บ 2.25 g) พลังงานดูเฉลี่ยทั้งสัปดาห์จากกราฟน้ำหนักตัว</p>
       ${lowFat >= 3 ? `<div class="banner bad"><b>ไขมันต่ำ ${lowFat} วันติด</b> ต่ำกว่า ${fMin} g ต่อวันนานๆ กดฮอร์โมนเพศชาย เพิ่มไข่ทั้งฟอง โยเกิร์ต หรือหมูติดมันในมื้อที่ไม่ใช่ก่อนซ้อม</div>` : ""}
       ${lowP >= 3 ? `<div class="banner"><b>โปรตีนต่ำ ${lowP} วันติด</b> ต่ำกว่า ${pMin} g กล้ามจะโตช้าลง เพิ่มอกไก่ 1–2 ซองหรือไข่ 2–3 ฟอง</div>` : ""}
       ${meals.length ? meals.map((m) => `<div class="meal"><div class="meal-h"><b class="mono">${m.t}</b><span class="mono">${m.kcal} kcal · P${Math.round(m.p)} C${Math.round(m.c)} F${Math.round(m.f)}</span></div>
@@ -658,12 +794,135 @@ function renderFood() {
     renderFood();
   };
   $("dob").onchange = saveProfile;
+  document.querySelectorAll("[data-act]").forEach((b) => b.onclick = async () => {
+    state.settings.activity = b.dataset.act;
+    await S.set("settings", state.settings);
+    renderFood();
+  });
   document.querySelectorAll("[data-bulk]").forEach((b) => b.onclick = async () => {
     state.settings.bulk = b.dataset.bulk;
     await S.set("settings", state.settings);
     renderFood();
   });
   $("height").onchange = saveProfile;
+}
+
+/* ---------------- calendar ---------------- */
+const TH_MONTH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+const dowOf = (d) => new Date(d + "T12:00:00").getDay();
+const exName = (id) => DAYS.flatMap((x) => x.ex).find((e) => e.id === id)?.n || altName(id) || id;
+
+// Everything the calendar shows for one date.
+function dayInfo(d, tg) {
+  const plan = DAYS.find((x) => x.dow === dowOf(d));
+  const base = plan.ex.filter((e) => e.log !== false);
+  const ids = (e) => [e.id, ...(SWAPS[e.id] || [])];
+  const doneEx = base.filter((e) => ids(e).some((id) => hist(id).some((h) => h.d === d)));
+  const lifts = Object.entries(state.logs).flatMap(([id, r]) => r.history.filter((h) => h.d === d).map((h) => ({ id, ...h })));
+  const cardio = (state.done[d] || []).filter((id) => DAYS.some((x) => x.ex.some((e) => e.id === id && e.cardio)));
+  const food = state.food[d] || [];
+  const tot = food.length ? L.dayTotals(food) : null;
+  const foodOk = tot && tg ? tot.p >= tg.pMin && tot.kcal >= tg.kcal * 0.85 : null;
+  const ci = state.checkins[d];
+  const ciCls = !ci ? null : L.redDay(ci) ? "r" : L.SIGNS.some((s) => ci[s.k]) ? "y" : "g";
+  return { d, plan, ratio: base.length ? doneEx.length / base.length : 0, lifts, cardio, tot, foodOk, ci, ciCls,
+    kg: state.body.find((e) => e.d === d)?.kg, sex: state.sex[d], photos: (state.photos || []).filter((p) => p.d === d).length,
+    measure: state.measures.find((m) => m.d === d) };
+}
+
+function plateRing(info) {
+  if (!info.lifts.length) return "";
+  const r = Math.max(0.08, info.ratio);
+  return `<svg class="cal-plate" viewBox="0 0 24 24" style="--pc:var(${info.plan.pc})" aria-hidden="true">
+    <circle class="trk" cx="12" cy="12" r="9"/><circle class="arc" cx="12" cy="12" r="9" pathLength="1" style="stroke-dasharray:${r.toFixed(3)} 1"/>
+    <text x="12" y="15.5" text-anchor="middle">${info.plan.code}</text></svg>`;
+}
+
+function renderCal() {
+  const t = today(), tg = targetsNow();
+  const month = state.calMonth || t.slice(0, 7);
+  const [y, m] = month.split("-").map(Number);
+  const first = `${month}-01`;
+  const start = L.mondayOf(first);
+  const sel = state.calSel && state.calSel.startsWith(month) ? state.calSel : t.startsWith(month) ? t : first;
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = L.addDays(start, i);
+    if (i >= 35 && !d.startsWith(month)) break;
+    cells.push(d);
+  }
+  const inMonth = cells.filter((d) => d.startsWith(month) && d <= t).map((d) => dayInfo(d, tg));
+  const trained = inMonth.filter((x) => x.lifts.length).length;
+  const cardioN = inMonth.filter((x) => x.cardio.length).length;
+  const foodLogged = inMonth.filter((x) => x.tot), foodOk = foodLogged.filter((x) => x.foodOk).length;
+  const sleeps = inMonth.map((x) => x.ci?.sleepH).filter((h) => h != null);
+  const kgs = inMonth.filter((x) => x.kg != null);
+  const fmtK = (v) => (v > 0 ? "+" : "") + v.toFixed(1);
+
+  const cell = (d, i) => {
+    const out = !d.startsWith(month), future = d > t;
+    if (out) return `<span class="cal-d out"></span>`;
+    const x = dayInfo(d, tg);
+    return `<button class="cal-d${d === t ? " today" : ""}${d === sel ? " sel" : ""}${future ? " future" : ""}" data-cal="${d}" style="--i:${i}" aria-label="${+d.slice(8)} ${TH_MONTH[m - 1]}">
+      <span class="cal-n">${+d.slice(8)}</span>
+      ${plateRing(x) || (x.plan.ex.length ? `<span class="cal-rest"></span>` : `<span class="cal-rest">พัก</span>`)}
+      <span class="cal-ic">${x.tot ? `<span class="ic ${x.foodOk ? "ok" : "low"}">${ICON.food}</span>` : ""}${x.cardio.length ? `<span class="ic heart">${ICON.heart}</span>` : ""}${x.ciCls ? `<i class="dot ${x.ciCls}"></i>` : ""}</span>
+      ${x.kg != null ? `<span class="cal-w">${x.kg.toFixed(1)}</span>` : ""}
+    </button>`;
+  };
+
+  const x = dayInfo(sel, tg);
+  const dt = new Date(sel + "T12:00:00");
+  const detail = `<div class="card cal-detail" id="calDetail">
+    <h3>${dt.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long" })}</h3>
+    <p class="label">${esc(x.plan.title)}${sel > t ? " · ยังไม่ถึง" : ""}</p>
+    ${x.lifts.length ? `<div class="cal-sec"><b>ซ้อม ${Math.round(x.ratio * 100)}%</b>${x.lifts.map((h) => `<div class="fitem"><span>${esc(exName(h.id))}</span><span class="mono">${h.w.map((w, k) => w + "×" + h.r[k]).join(" ")}</span></div>`).join("")}</div>` : sel <= t && x.plan.ex.length ? `<p class="note">ไม่ได้บันทึกการซ้อม</p>` : ""}
+    ${x.cardio.length ? `<div class="cal-sec"><b>คาร์ดิโอ</b> ${x.cardio.map((id) => esc(exName(id))).join(", ")} ✓</div>` : ""}
+    ${x.tot ? `<div class="cal-sec"><b>อาหาร ${x.foodOk ? "ครบ" : "ยังไม่ถึงเป้า"}</b><p class="mono">${x.tot.kcal.toLocaleString()}${tg ? ` / ${tg.kcal.toLocaleString()}` : ""} kcal · P${Math.round(x.tot.p)}${tg ? `/${tg.pMin}` : ""} · C${Math.round(x.tot.c)} · F${Math.round(x.tot.f)}${tg ? `/${tg.fMin}` : ""}</p></div>` : ""}
+    ${x.ci ? `<div class="cal-sec"><b>Check-in</b> <i class="dot ${x.ciCls}"></i> ${x.ci.sleepH != null ? `นอน ${x.ci.sleepH} ชม. · ` : ""}${L.SIGNS.filter((s) => x.ci[s.k]).map((s) => esc(s.t)).join(" · ") || "ปกติ"}</div>` : ""}
+    ${x.sex ? `<div class="cal-sec"><b>เซ็กส์</b> แข็งตัว ${x.sex.erect}/5 · อึด ${x.sex.stamina}/5</div>` : ""}
+    ${x.kg != null || x.measure ? `<div class="cal-sec"><b>ร่างกาย</b> ${x.kg != null ? `${x.kg.toFixed(1)} kg` : ""}${x.measure ? ` · แขน ${x.measure.arm ?? "-"} อก ${x.measure.chest ?? "-"} เอว ${x.measure.waist ?? "-"} cm` : ""}</div>` : ""}
+    ${x.photos ? `<div class="cal-sec"><b>รูปความคืบหน้า</b> ${x.photos} รูป</div>` : ""}
+    ${!x.lifts.length && !x.tot && !x.ci && x.kg == null && sel <= t ? `<p class="note">วันนี้ยังไม่มีบันทึก</p>` : ""}
+  </div>`;
+
+  $("p-cal").innerHTML = `
+    <div class="cal-head">
+      <button class="btn ghost" id="calPrev" aria-label="เดือนก่อน">‹</button>
+      <h2>${TH_MONTH[m - 1]} ${y + 543}</h2>
+      <button class="btn ghost" id="calNext" aria-label="เดือนถัดไป">›</button>
+    </div>
+    <div class="cal-sum">
+      <div><b>${trained}</b><span>วันซ้อม</span></div>
+      <div><b>${cardioN}</b><span>คาร์ดิโอ</span></div>
+      <div><b>${foodOk}/${foodLogged.length}</b><span>กินครบ</span></div>
+      <div><b>${sleeps.length ? (sleeps.reduce((a, b) => a + b, 0) / sleeps.length).toFixed(1) : "-"}</b><span>นอนเฉลี่ย</span></div>
+      <div><b>${kgs.length >= 2 ? fmtK(kgs[kgs.length - 1].kg - kgs[0].kg) : "-"}</b><span>kg เดือนนี้</span></div>
+    </div>
+    <div class="cal-grid">
+      ${["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"].map((h) => `<span class="cal-h">${h}</span>`).join("")}
+      ${cells.map(cell).join("")}
+    </div>
+    <div class="cal-legend">
+      <span>${plateRing({ lifts: [1], ratio: 0.7, plan: DAYS[0] })} ซ้อม (วงเต็ม = ครบทุกท่า)</span>
+      <span><span class="ic ok">${ICON.food}</span> กินครบ</span><span><span class="ic low">${ICON.food}</span> ยังไม่ถึง</span>
+      <span><span class="ic heart">${ICON.heart}</span> คาร์ดิโอ</span>
+      <span><i class="dot g"></i><i class="dot y"></i><i class="dot r"></i> check-in</span>
+      <span class="mono">77.4</span><span>น้ำหนัก</span>
+    </div>
+    ${detail}`;
+  document.querySelectorAll("[data-cal]").forEach((b) => b.onclick = () => {
+    state.calSel = b.dataset.cal;
+    renderCal();
+    $("calDetail").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
+  const shift = (k) => {
+    const nd = new Date(y, m - 1 + k, 1);
+    state.calMonth = `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, "0")}`;
+    renderCal();
+  };
+  $("calPrev").onclick = () => shift(-1);
+  $("calNext").onclick = () => shift(1);
 }
 
 /* ---------------- goals ---------------- */
@@ -1086,6 +1345,13 @@ function renderData() {
   const days = new Set(Object.values(state.logs).flatMap((r) => r.history.map((h) => h.d))).size;
   $("p-data").innerHTML = `
     <h2>สำรองข้อมูล</h2>
+    <div class="card">
+      <h3>ภาพเคลื่อนไหว</h3>
+      <div class="seg" role="group" aria-label="ภาพเคลื่อนไหว">
+        ${[["on", "เปิดเสมอ"], ["auto", "ตามเครื่อง"], ["off", "ปิด"]].map(([k, t]) => `<button data-motion="${k}" aria-pressed="${(state.settings.motion || "on") === k}">${t}</button>`).join("")}
+      </div>
+      <p class="note">ถ้ามือถือเปิด "ลดการเคลื่อนไหว" ไว้ (iPhone: Reduce Motion · Android: ปิดภาพเคลื่อนไหว) แบบตามเครื่องจะไม่มีภาพเคลื่อนไหวเลย แบบเปิดเสมอจะเล่นในแอปนี้ไม่ว่ามือถือตั้งไว้อย่างไร</p>
+    </div>
     <div class="grid2">
       <div class="card">
         <h3>ข้อมูลในเครื่องนี้</h3>
@@ -1101,6 +1367,12 @@ function renderData() {
         <div class="row-actions"><input type="file" id="imp" accept="application/json,.json"><span id="impOk"></span></div>
       </div>
     </div>`;
+  document.querySelectorAll("[data-motion]").forEach((b) => b.onclick = async () => {
+    state.settings.motion = b.dataset.motion;
+    await S.set("settings", state.settings);
+    applyMotion();
+    renderData();
+  });
   $("exp").onclick = async () => {
     const data = await S.exportAll();
     if ($("expPhotos")?.checked && state.photos?.length) {

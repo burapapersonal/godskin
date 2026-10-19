@@ -207,3 +207,10 @@ test("every loggable exercise and swap has an animation that draws finite lines"
   assert.equal(phaseAt(1150), 1);
   assert.equal(phaseAt(3000), 0);
 });
+
+test("activity level moves the calorie target and carbs keep a 3 g/kg floor", () => {
+  const low = L.targets(79, 183, 25, 300, L.ACTIVITY.low.f), mid = L.targets(79, 183, 25, 300);
+  assert.ok(mid.kcal - low.kcal >= 250 && mid.kcal - low.kcal <= 300);
+  assert.equal(mid.cMin, 237);
+  assert.ok(low.c > low.cMin);
+});
