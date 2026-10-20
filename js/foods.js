@@ -20,10 +20,13 @@ export const FOODS = [
   { id: "fried_egg", n: "ไข่ดาว", unit: "g", per: 100, def: 55, pc: ["ฟอง", 55], k: 182, p: 11.5, c: 0.7, f: 14.5 },
   { id: "pork_loin", n: "หมูสันนอก (น้ำหนักดิบ)", unit: "g", per: 100, def: 200, k: 143, p: 21.4, c: 0, f: 5.7 },
   { id: "pork_mince", n: "หมูบดไม่ติดมัน (น้ำหนักดิบ)", unit: "g", per: 100, def: 200, k: 160, p: 20, c: 0, f: 8.5 },
+  { id: "pork_mince_fat", n: "หมูบดติดมัน (น้ำหนักดิบ)", unit: "g", per: 100, def: 150, k: 263, p: 16.9, c: 0, f: 21.2, na: 56 },
   { id: "chicken_breast", n: "อกไก่ (น้ำหนักดิบ)", unit: "g", per: 100, def: 200, k: 120, p: 22.5, c: 0, f: 2.6 },
   { id: "shrimp_boiled", n: "กุ้งต้ม (เนื้อล้วน แกะเปลือก)", unit: "g", per: 100, def: 100, k: 99, p: 24, c: 0.2, f: 0.3, na: 111 },
   { id: "beef_belly", n: "เนื้อวัวสามชั้น / belly cut (น้ำหนักดิบ)", unit: "g", per: 100, def: 100, k: 330, p: 15, c: 0, f: 30 },
   { id: "pork_belly", n: "หมูสามชั้น (น้ำหนักดิบ)", unit: "g", per: 100, def: 100, k: 518, p: 9.3, c: 0, f: 53 },
+  // Thai crispy pork belly (cooked weight); fat varies a lot by cut, estimate.
+  { id: "moo_krob", n: "หมูกรอบ (น้ำหนักสุก, ประมาณ)", unit: "g", per: 100, def: 100, k: 520, p: 20, c: 1, f: 48, na: 700 },
   // CP tender chicken breast, 90 g pack: plain 80 kcal P17 C2 F0.5; flavoured packs run ~90 kcal.
   { id: "seven_chicken", n: "อกไก่นุ่ม ซีพี เซเว่น", unit: "g", per: 100, def: 90, pc: ["ซอง", 90], k: 94, p: 18.9, c: 2.8, f: 0.9, na: 389 },
   // Shumai from the CP bag label (120 g): 300 kcal, P9 C21 F20, sodium 900 mg.
@@ -44,6 +47,8 @@ export const FOODS = [
   // Homemade chilli paste, no label: estimated for an oil-based nam prik pao without sugar.
   { id: "namprik_pla", n: "พริกเผาปลาย่าง คุณเพ็ญศรี (ค่าประมาณ)", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 15], k: 320, p: 8, c: 14, f: 26, na: 1500 },
   { id: "mama", n: "มาม่า รวมเครื่องปรุง", unit: "g", per: 100, def: 60, pc: ["ซอง", 60], k: 467, p: 10, c: 63.3, f: 18.3, na: 2500 },
+  // Mama tom yum shrimp 55 g pack, typical label values incl. seasoning; check your pack.
+  { id: "mama_tomyum", n: "มาม่า ต้มยำกุ้ง รวมเครื่องปรุง", unit: "g", per: 100, def: 55, pc: ["ซอง", 55], k: 455, p: 9.1, c: 63.6, f: 18.2, na: 2200 },
   { id: "oil", n: "น้ำมันพืช", unit: "g", per: 100, def: 14, pc: ["ช้อนโต๊ะ", 14], k: 884, p: 0, c: 0, f: 100 },
   // Heinz low-fat / light mayo: estimate from typical light-mayo labels, check the jar.
   { id: "heinz_mayo_lf", n: "มายองเนส ไฮนซ์ โลว์แฟต (ประมาณ)", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 15], k: 300, p: 0.8, c: 8, f: 29, na: 800 },
