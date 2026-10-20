@@ -10,6 +10,8 @@ export const FOODS = [
   { id: "rice_brown", n: "ข้าวกล้อง (สุก)", unit: "g", per: 100, def: 150, pc: ["ถ้วย", 150], k: 123, p: 2.7, c: 26, f: 1 },
   { id: "oats", n: "ข้าวโอ๊ต (แห้ง)", unit: "g", per: 100, def: 50, k: 380, p: 13, c: 66, f: 7 },
   { id: "bread", n: "ขนมปังขาว", unit: "g", per: 100, def: 56, pc: ["แผ่น", 28], k: 265, p: 9, c: 49, f: 3.2 },
+  // Whole-wheat sandwich loaf label: 2 slices (50 g) = 140 kcal, F2, P4, C25, fibre 2, Na210.
+  { id: "bread_ww", n: "ขนมปังโฮลวีท (ฉลาก)", unit: "g", per: 100, def: 50, pc: ["แผ่น", 25], k: 280, p: 8, c: 50, f: 4, na: 420 },
   // Mission label (Thai import, 360 g pack of 6): per 100 g 300 kcal, P8 C50 F7, sodium 940 mg.
   { id: "mission_wrap", n: "แป้งแรป Mission Original", unit: "g", per: 100, def: 120, pc: ["แผ่น", 60], k: 300, p: 8, c: 50, f: 7, na: 940 },
   { id: "sweet_potato", n: "มันหวาน (ต้ม)", unit: "g", per: 100, def: 150, k: 86, p: 1.6, c: 20, f: 0.1 },
@@ -47,8 +49,8 @@ export const FOODS = [
   // Homemade chilli paste, no label: estimated for an oil-based nam prik pao without sugar.
   { id: "namprik_pla", n: "พริกเผาปลาย่าง คุณเพ็ญศรี (ค่าประมาณ)", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 15], k: 320, p: 8, c: 14, f: 26, na: 1500 },
   { id: "mama", n: "มาม่า รวมเครื่องปรุง", unit: "g", per: 100, def: 60, pc: ["ซอง", 60], k: 467, p: 10, c: 63.3, f: 18.3, na: 2500 },
-  // Mama tom yum shrimp 55 g pack, typical label values incl. seasoning; check your pack.
-  { id: "mama_tomyum", n: "มาม่า ต้มยำกุ้ง รวมเครื่องปรุง", unit: "g", per: 100, def: 55, pc: ["ซอง", 55], k: 455, p: 9.1, c: 63.6, f: 18.2, na: 2200 },
+  // Mama OK orange pack label: 85 g = 390 kcal, F16, P7, C55, Na1910.
+  { id: "mama_tomyum", n: "มาม่า OK ซองส้ม 85 g (ฉลาก)", unit: "g", per: 100, def: 85, pc: ["ซอง", 85], k: 459, p: 8.2, c: 64.7, f: 18.8, na: 2247 },
   { id: "oil", n: "น้ำมันพืช", unit: "g", per: 100, def: 14, pc: ["ช้อนโต๊ะ", 14], k: 884, p: 0, c: 0, f: 100 },
   // Heinz low-fat / light mayo: estimate from typical light-mayo labels, check the jar.
   { id: "heinz_mayo_lf", n: "มายองเนส ไฮนซ์ โลว์แฟต (ประมาณ)", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 15], k: 300, p: 0.8, c: 8, f: 29, na: 800 },
