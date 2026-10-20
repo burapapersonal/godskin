@@ -31,6 +31,9 @@ export const FOODS = [
   // No label yet; estimated from typical minced pork rolls (~25 g a piece).
   { id: "seven_seaweed_pork", n: "หมูห่อสาหร่าย เซเว่น (ค่าประมาณ)", unit: "g", per: 100, def: 125, pc: ["ชิ้น", 25], k: 200, p: 14, c: 8, f: 12 },
   { id: "kimchi", n: "กิมจิผักกาด (เค็ม)", unit: "g", per: 100, def: 100, k: 20, p: 1.1, c: 3, f: 0.5, na: 500 },
+  { id: "broccoli", n: "บร็อคโคลี่ (ดิบ/ลวก)", unit: "g", per: 100, def: 100, k: 34, p: 2.8, c: 6.6, f: 0.4, na: 33 },
+  { id: "napa_cabbage", n: "ผักกาดขาว", unit: "g", per: 100, def: 100, k: 16, p: 1.2, c: 3.2, f: 0.2, na: 9 },
+  { id: "lettuce", n: "ผักกาดหอม / ผักสลัด", unit: "g", per: 100, def: 50, k: 15, p: 1.4, c: 2.9, f: 0.2, na: 28 },
   { id: "greek_cheesebaron", n: "กรีกโยเกิร์ต The Cheese Baron รสธรรมชาติ", unit: "g", per: 100, def: 100, pc: ["ถ้วย", 100], k: 160, p: 9, c: 5, f: 11 },
   { id: "whey", n: "เวย์โปรตีน", unit: "g", per: 100, def: 30, pc: ["สกู๊ป", 30], k: 400, p: 80, c: 10, f: 5 },
   { id: "milk", n: "นมจืด", unit: "ml", per: 100, def: 200, pc: ["กล่อง", 200], k: 65, p: 3.2, c: 4.8, f: 3.7 },
