@@ -41,6 +41,7 @@ export const FOODS = [
   { id: "broccoli", n: "บร็อคโคลี่ (ดิบ/ลวก)", unit: "g", per: 100, def: 100, k: 34, p: 2.8, c: 6.6, f: 0.4, na: 33 },
   { id: "napa_cabbage", n: "ผักกาดขาว", unit: "g", per: 100, def: 100, k: 16, p: 1.2, c: 3.2, f: 0.2, na: 9 },
   { id: "lettuce", n: "ผักกาดหอม / ผักสลัด", unit: "g", per: 100, def: 50, k: 15, p: 1.4, c: 2.9, f: 0.2, na: 28 },
+  { id: "onion", n: "หอมใหญ่", unit: "g", per: 100, def: 50, pc: ["หัว", 150], k: 40, p: 1.1, c: 9.3, f: 0.1, na: 4 },
   { id: "greek_cheesebaron", n: "กรีกโยเกิร์ต The Cheese Baron รสธรรมชาติ", unit: "g", per: 100, def: 100, pc: ["ถ้วย", 100], k: 160, p: 9, c: 5, f: 11 },
   { id: "whey", n: "เวย์โปรตีน", unit: "g", per: 100, def: 30, pc: ["สกู๊ป", 30], k: 400, p: 80, c: 10, f: 5 },
   { id: "milk", n: "นมจืด", unit: "ml", per: 100, def: 200, pc: ["กล่อง", 200], k: 65, p: 3.2, c: 4.8, f: 3.7 },
@@ -54,8 +55,11 @@ export const FOODS = [
   // Mama OK orange pack label: 85 g = 390 kcal, F16, P7, C55, Na1910.
   { id: "mama_tomyum", n: "มาม่า OK ซองส้ม 85 g (ฉลาก)", unit: "g", per: 100, def: 85, pc: ["ซอง", 85], k: 459, p: 8.2, c: 64.7, f: 18.8, na: 2247 },
   { id: "oil", n: "น้ำมันพืช", unit: "g", per: 100, def: 14, pc: ["ช้อนโต๊ะ", 14], k: 884, p: 0, c: 0, f: 100 },
+  { id: "sesame_oil", n: "น้ำมันงา", unit: "g", per: 100, def: 5, pc: ["ช้อนชา", 4.5], k: 884, p: 0, c: 0, f: 100 },
   // Heinz low-fat / light mayo: estimate from typical light-mayo labels, check the jar.
   { id: "heinz_mayo_lf", n: "มายองเนส ไฮนซ์ โลว์แฟต (ประมาณ)", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 15], k: 300, p: 0.8, c: 8, f: 29, na: 800 },
+  // Takumi shoyu: estimate from typical Japanese-style soy sauce, check the bottle.
+  { id: "takumi_shoyu", n: "ทาคูมิ โชยุ (ประมาณ)", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 16], k: 60, p: 6, c: 8, f: 0, na: 5700 },
   { id: "krapao", n: "ข้าวกะเพราหมูสับ + ไข่ดาว", unit: "g", per: 100, def: 400, pc: ["จาน", 400], k: 163, p: 7.5, c: 17.5, f: 7 },
   { id: "chicken_rice", n: "ข้าวมันไก่", unit: "g", per: 100, def: 350, pc: ["จาน", 350], k: 171, p: 8, c: 21.4, f: 6 },
 ];
