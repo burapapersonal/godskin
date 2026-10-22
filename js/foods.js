@@ -22,6 +22,10 @@ export const CATS = [
 
 const cat = (c, list) => list.map((f) => ({ ...f, cat: c }));
 
+// Buffet trays: raw weight per small / medium / large tray; `sizes` lets the user pick one.
+const TRAYS = [["ถาดเล็ก", 50], ["ถาดกลาง", 100], ["ถาดใหญ่", 200]];
+const TRAY = { unit: "g", per: 100, def: 100, pc: TRAYS[1], sizes: TRAYS };
+
 export const FOODS = [
   ...cat("carb", [
     { id: "rice", g: "rice", vn: "ข้าวขาว", n: "ข้าวสวย (สุก)", a: "rice white", unit: "g", per: 100, def: 150, pc: ["ถ้วย", 150], k: 130, p: 2.7, c: 28, f: 0.3 },
@@ -206,27 +210,59 @@ export const FOODS = [
     { id: "swensens", n: "สเวนเซ่นส์ ไอศกรีม (ประมาณ)", a: "swensens ice cream", unit: "g", per: 100, def: 70, pc: ["สกู๊ป", 70], k: 214, p: 3.5, c: 26, f: 11 },
     { id: "dq_blizzard", n: "แดรี่ควีน บลิซซาร์ด ไซซ์ S (ประมาณ)", a: "dairy queen dq blizzard", unit: "g", per: 100, def: 250, pc: ["ถ้วย S", 250], k: 160, p: 3.4, c: 24, f: 5 },
   ]),
-  // Buffets (Momo Paradise, Tee Noi, Shabushi, Bar B Q Plaza, หมูกระทะ): log plates, or the whole meal.
+  // Buffets (Momo Paradise, Tee Noi, Shabushi, Bar B Q Plaza, หมูกระทะ): log each tray, or the whole meal.
+  // Trays are raw weight; the three sizes are typical, so weigh or adjust grams if a shop's differ.
   ...cat("buffet", [
-    { id: "buffet_light", g: "buffet_meal", vn: "กินเบา", n: "บุฟเฟ่ต์ชาบู/ปิ้งย่าง ทั้งมื้อ กินเบา (ประมาณ)", a: "buffet shabu momo tee noi ตี๋น้อย โมโม่ shabushi", unit: "มื้อ", per: 1, def: 1, k: 1000, p: 60, c: 90, f: 45, na: 3000 },
-    { id: "buffet_normal", g: "buffet_meal", vn: "กินปกติ", n: "บุฟเฟ่ต์ชาบู/ปิ้งย่าง ทั้งมื้อ กินปกติ (ประมาณ)", a: "buffet shabu momo tee noi ตี๋น้อย โมโม่ shabushi", unit: "มื้อ", per: 1, def: 1, k: 1500, p: 85, c: 130, f: 70, na: 4000 },
-    { id: "buffet_heavy", g: "buffet_meal", vn: "จัดหนัก", n: "บุฟเฟ่ต์ชาบู/ปิ้งย่าง ทั้งมื้อ จัดหนัก (ประมาณ)", a: "buffet shabu momo tee noi ตี๋น้อย โมโม่ shabushi", unit: "มื้อ", per: 1, def: 1, k: 2200, p: 120, c: 180, f: 110, na: 6000 },
-    { id: "shabu_beef", g: "shabu_meat", vn: "เนื้อสไลซ์ติดมัน", n: "เนื้อสไลซ์ชาบู ติดมัน (โมโม่/วากิว, ดิบ)", a: "momo paradise wagyu beef shabu โมโม่", unit: "g", per: 100, def: 100, pc: ["จาน", 100], k: 300, p: 16, c: 0, f: 26, na: 60 },
-    { id: "shabu_beef_lean", g: "shabu_meat", vn: "เนื้อสไลซ์ลีน", n: "เนื้อสไลซ์ชาบู ไม่ค่อยติดมัน (ดิบ)", a: "beef lean shabu momo", unit: "g", per: 100, def: 100, pc: ["จาน", 100], k: 180, p: 20, c: 0, f: 11, na: 60 },
-    { id: "shabu_pork", g: "shabu_meat", vn: "หมูสไลซ์สันคอ", n: "หมูสไลซ์ชาบู สันคอ (ดิบ)", a: "pork shabu tee noi ตี๋น้อย", unit: "g", per: 100, def: 100, pc: ["จาน", 100], k: 250, p: 16, c: 0, f: 21, na: 60 },
-    { id: "shabu_pork_belly", g: "shabu_meat", vn: "หมูสามชั้นสไลซ์", n: "หมูสามชั้นสไลซ์ (ดิบ)", a: "pork belly shabu tee noi ตี๋น้อย หมูกระทะ", unit: "g", per: 100, def: 100, pc: ["จาน", 100], k: 518, p: 9.3, c: 0, f: 53, na: 50 },
-    { id: "shabu_chicken", g: "shabu_meat", vn: "ไก่", n: "ไก่หมัก/อกไก่สไลซ์ (ดิบ)", a: "chicken shabu", unit: "g", per: 100, def: 100, pc: ["จาน", 100], k: 140, p: 21, c: 2, f: 5, na: 300 },
-    { id: "grill_marinated", n: "หมู/เนื้อหมัก ปิ้งย่าง (หมูกระทะ, บาร์บีคิวพลาซ่า)", a: "mookata bar b q plaza grill marinated หมูกระทะ", unit: "g", per: 100, def: 100, pc: ["จาน", 100], k: 280, p: 17, c: 5, f: 21, na: 500 },
-    { id: "shabu_seafood", n: "กุ้ง/ปลาหมึก/ปลาดอลลี่ บุฟเฟ่ต์", a: "seafood shabu buffet", unit: "g", per: 100, def: 100, pc: ["จาน", 100], k: 90, p: 17, c: 1.5, f: 1.2, na: 200 },
-    { id: "shabu_balls", n: "ลูกชิ้น/เกี๊ยว/เต้าหู้ปลา บุฟเฟ่ต์", a: "fish ball dumpling buffet", unit: "g", per: 100, def: 100, pc: ["จาน", 100], k: 170, p: 10, c: 15, f: 8, na: 900 },
-    { id: "udon", n: "เส้นอุด้ง (ต้ม)", a: "udon noodle buffet", unit: "g", per: 100, def: 200, pc: ["ก้อน", 200], k: 105, p: 2.6, c: 21.5, f: 0.4, na: 120 },
-    { id: "shabu_broth", g: "broth", vn: "น้ำซุปใส/สุกี้", n: "น้ำซุปชาบู/สุกี้ (ที่ซด)", a: "broth soup shabu", unit: "ml", per: 100, def: 200, pc: ["ถ้วย", 200], k: 15, p: 1, c: 1.5, f: 0.5, na: 400 },
-    { id: "mala_broth", g: "broth", vn: "หม่าล่า/ต้มยำข้น", n: "น้ำซุปหม่าล่า/ต้มยำน้ำข้น (ที่ซด)", a: "mala broth tee noi ตี๋น้อย", unit: "ml", per: 100, def: 200, pc: ["ถ้วย", 200], k: 60, p: 1, c: 2, f: 5, na: 600 },
-    { id: "suki_sauce", g: "dip", vn: "น้ำจิ้มสุกี้", n: "น้ำจิ้มสุกี้", a: "suki sauce dip", unit: "g", per: 100, def: 30, pc: ["ช้อนโต๊ะ", 15], k: 120, p: 1, c: 28, f: 0.5, na: 1800 },
-    { id: "sesame_dip", g: "dip", vn: "น้ำจิ้มงา", n: "น้ำจิ้มงา (ชาบู)", a: "sesame sauce goma dip", unit: "g", per: 100, def: 30, pc: ["ช้อนโต๊ะ", 15], k: 350, p: 6, c: 20, f: 28, na: 1500 },
-    { id: "ponzu", g: "dip", vn: "พอนสึ", n: "พอนสึ", a: "ponzu dip", unit: "g", per: 100, def: 30, pc: ["ช้อนโต๊ะ", 15], k: 50, p: 3, c: 8, f: 0, na: 3500 },
-    { id: "sushi_nigiri", n: "ซูชิหน้าปลา/แซลมอน (ซูชิโร่, ชาบูชิ)", a: "sushi nigiri salmon sushiro shabushi", unit: "g", per: 100, def: 80, pc: ["คำ", 40], k: 150, p: 6, c: 22, f: 3.5, na: 300 },
-    { id: "buffet_icecream", n: "ไอศกรีมบุฟเฟ่ต์", a: "ice cream buffet", unit: "g", per: 100, def: 60, pc: ["สกู๊ป", 60], k: 200, p: 3.5, c: 24, f: 10 },
+    { id: "buffet_light", g: "buffet_meal", vn: "กินเบา", n: "บุฟเฟ่ต์ทั้งมื้อ กินเบา (ประมาณ)", a: "buffet shabu momo tee noi ตี๋น้อย โมโม่ shabushi หมูกระทะ", unit: "มื้อ", per: 1, def: 1, k: 1000, p: 60, c: 90, f: 45, na: 3000 },
+    { id: "buffet_normal", g: "buffet_meal", vn: "กินปกติ", n: "บุฟเฟ่ต์ทั้งมื้อ กินปกติ (ประมาณ)", a: "buffet shabu momo tee noi ตี๋น้อย โมโม่ shabushi หมูกระทะ", unit: "มื้อ", per: 1, def: 1, k: 1500, p: 85, c: 130, f: 70, na: 4000 },
+    { id: "buffet_heavy", g: "buffet_meal", vn: "จัดหนัก", n: "บุฟเฟ่ต์ทั้งมื้อ จัดหนัก (ประมาณ)", a: "buffet shabu momo tee noi ตี๋น้อย โมโม่ shabushi หมูกระทะ", unit: "มื้อ", per: 1, def: 1, k: 2200, p: 120, c: 180, f: 110, na: 6000 },
+
+    { id: "shabu_beef", g: "bf_beef", vn: "วากิว/ติดมัน", n: "บุฟเฟ่ต์ เนื้อวัวสไลซ์ติดมัน (โมโม่ วากิว)", a: "momo paradise wagyu beef shabu โมโม่ เนื้อ", ...TRAY, k: 300, p: 16, c: 0, f: 26, na: 60 },
+    { id: "shabu_beef_lean", g: "bf_beef", vn: "ลีน", n: "บุฟเฟ่ต์ เนื้อวัวสไลซ์ไม่ค่อยติดมัน", a: "beef lean shabu momo เนื้อ", ...TRAY, k: 180, p: 20, c: 0, f: 11, na: 60 },
+    { id: "bf_beef_marinated", g: "bf_beef", vn: "หมักซอส", n: "บุฟเฟ่ต์ เนื้อหมักซอส ปิ้งย่าง", a: "beef marinated bar b q plaza yakiniku เนื้อ", ...TRAY, k: 260, p: 17, c: 6, f: 18, na: 500 },
+
+    { id: "shabu_pork", g: "bf_pork", vn: "สันคอสไลซ์", n: "บุฟเฟ่ต์ หมูสันคอสไลซ์ (คุโรบุตะ/หมูชาบู)", a: "pork shabu kurobuta tee noi ตี๋น้อย momo หมู", ...TRAY, k: 250, p: 16, c: 0, f: 21, na: 60 },
+    { id: "shabu_pork_belly", g: "bf_pork", vn: "สามชั้น", n: "บุฟเฟ่ต์ หมูสามชั้นสไลซ์", a: "pork belly shabu tee noi ตี๋น้อย หมูกระทะ หมู", ...TRAY, k: 518, p: 9.3, c: 0, f: 53, na: 50 },
+    { id: "grill_marinated", g: "bf_pork", vn: "หมูหมักนุ่ม", n: "บุฟเฟ่ต์ หมูหมักนุ่ม (หมูกระทะ บาร์บีคิวพลาซ่า)", a: "mookata bar b q plaza grill marinated หมูกระทะ หมู", ...TRAY, k: 220, p: 17, c: 4, f: 15, na: 500 },
+    { id: "bf_pork_loin", g: "bf_pork", vn: "สันนอกสไลซ์", n: "บุฟเฟ่ต์ หมูสันนอก/สันในสไลซ์", a: "pork loin shabu หมู", ...TRAY, k: 143, p: 21.4, c: 0, f: 5.7, na: 55 },
+    { id: "bf_bacon", g: "bf_pork", vn: "เบคอน", n: "บุฟเฟ่ต์ เบคอน", a: "bacon หมูกระทะ หมู", ...TRAY, k: 400, p: 13, c: 1, f: 38, na: 1000 },
+    { id: "bf_liver", g: "bf_pork", vn: "ตับ", n: "บุฟเฟ่ต์ ตับหมู", a: "pork liver หมูกระทะ หมู", ...TRAY, k: 134, p: 21, c: 2.5, f: 3.7, na: 90 },
+
+    { id: "shabu_chicken", g: "bf_chicken", vn: "อกสไลซ์", n: "บุฟเฟ่ต์ อกไก่สไลซ์", a: "chicken breast shabu ไก่", ...TRAY, k: 120, p: 22.5, c: 0, f: 2.6, na: 60 },
+    { id: "bf_chicken_marinated", g: "bf_chicken", vn: "ไก่หมัก", n: "บุฟเฟ่ต์ ไก่หมัก (สะโพก)", a: "chicken marinated หมูกระทะ ไก่", ...TRAY, k: 170, p: 18, c: 4, f: 9, na: 450 },
+
+    { id: "shabu_seafood", g: "bf_sea", vn: "กุ้ง", n: "บุฟเฟ่ต์ กุ้ง (แกะเปลือก)", a: "shrimp prawn buffet ทะเล", ...TRAY, k: 85, p: 20, c: 0.2, f: 0.5, na: 120 },
+    { id: "bf_squid", g: "bf_sea", vn: "ปลาหมึก", n: "บุฟเฟ่ต์ ปลาหมึก", a: "squid buffet ทะเล", ...TRAY, k: 92, p: 15.6, c: 3.1, f: 1.4, na: 44 },
+    { id: "bf_dory", g: "bf_sea", vn: "ปลาดอลลี่", n: "บุฟเฟ่ต์ ปลาดอลลี่/ปลาเนื้อขาว", a: "dory fish buffet ทะเล", ...TRAY, k: 80, p: 15, c: 0, f: 2, na: 60 },
+    { id: "bf_mussel", g: "bf_sea", vn: "หอยแมลงภู่", n: "บุฟเฟ่ต์ หอยแมลงภู่ (เนื้อ)", a: "mussel buffet ทะเล", ...TRAY, k: 86, p: 12, c: 3.7, f: 2.2, na: 290 },
+    { id: "bf_salmon", g: "bf_sea", vn: "แซลมอน", n: "บุฟเฟ่ต์ แซลมอน", a: "salmon sashimi buffet ทะเล", ...TRAY, k: 208, p: 20, c: 0, f: 13, na: 59 },
+
+    { id: "shabu_balls", g: "bf_balls", vn: "ลูกชิ้นปลา/หมู", n: "บุฟเฟ่ต์ ลูกชิ้นปลา/หมู", a: "fish ball meatball buffet ของลวก", ...TRAY, k: 150, p: 11, c: 10, f: 8, na: 900 },
+    { id: "bf_wonton", g: "bf_balls", vn: "เกี๊ยวกุ้ง", n: "บุฟเฟ่ต์ เกี๊ยวกุ้ง", a: "shrimp dumpling wonton buffet ของลวก", ...TRAY, k: 200, p: 8, c: 25, f: 7, na: 600 },
+    { id: "bf_fish_tofu", g: "bf_balls", vn: "เต้าหู้ปลา", n: "บุฟเฟ่ต์ เต้าหู้ปลา", a: "fish tofu buffet ของลวก", ...TRAY, k: 180, p: 9, c: 14, f: 10, na: 800 },
+    { id: "bf_cheese_ball", g: "bf_balls", vn: "ชีสบอล", n: "บุฟเฟ่ต์ ลูกชิ้นชีส/ชีสบอล", a: "cheese ball buffet ของลวก", ...TRAY, k: 260, p: 9, c: 18, f: 17, na: 700 },
+    { id: "bf_crab_stick", g: "bf_balls", vn: "ปูอัด", n: "บุฟเฟ่ต์ ปูอัด", a: "crab stick kani buffet ของลวก", ...TRAY, k: 95, p: 7.6, c: 15, f: 0.5, na: 840 },
+    { id: "bf_sausage", g: "bf_balls", vn: "ไส้กรอก", n: "บุฟเฟ่ต์ ไส้กรอก", a: "sausage buffet หมูกระทะ ของลวก", ...TRAY, k: 250, p: 11, c: 8, f: 19, na: 900 },
+
+    { id: "bf_veg", g: "bf_veg", vn: "ผักรวม", n: "บุฟเฟ่ต์ ผักรวม (ผักกาด คะน้า กวางตุ้ง)", a: "vegetables buffet ผัก", ...TRAY, k: 20, p: 1.5, c: 3.5, f: 0.2, na: 20 },
+    { id: "bf_enoki", g: "bf_veg", vn: "เห็ดเข็มทอง", n: "บุฟเฟ่ต์ เห็ดเข็มทอง/เห็ดรวม", a: "enoki mushroom buffet ผัก", ...TRAY, k: 37, p: 2.7, c: 7.8, f: 0.3, na: 3 },
+    { id: "bf_corn", g: "bf_veg", vn: "ข้าวโพด", n: "บุฟเฟ่ต์ ข้าวโพด", a: "corn buffet ผัก", ...TRAY, k: 96, p: 3.4, c: 21, f: 1.5, na: 15 },
+
+    { id: "udon", g: "bf_noodle", vn: "อุด้ง", n: "บุฟเฟ่ต์ เส้นอุด้ง", a: "udon noodle buffet เส้น", ...TRAY, k: 105, p: 2.6, c: 21.5, f: 0.4, na: 120 },
+    { id: "bf_egg_noodle", g: "bf_noodle", vn: "บะหมี่", n: "บุฟเฟ่ต์ บะหมี่", a: "egg noodle buffet เส้น", ...TRAY, k: 138, p: 4.5, c: 25, f: 2, na: 100 },
+    { id: "bf_glass_noodle", g: "bf_noodle", vn: "วุ้นเส้น", n: "บุฟเฟ่ต์ วุ้นเส้น (ลวกแล้ว)", a: "glass noodle buffet เส้น", ...TRAY, k: 85, p: 0.1, c: 21, f: 0, na: 10 },
+
+    { id: "shabu_broth", g: "broth", vn: "น้ำซุปใส/สุกี้", n: "บุฟเฟ่ต์ น้ำซุปชาบู/สุกี้ (ที่ซด)", a: "broth soup shabu ซุป", unit: "ml", per: 100, def: 200, pc: ["ถ้วย", 200], k: 15, p: 1, c: 1.5, f: 0.5, na: 400 },
+    { id: "mala_broth", g: "broth", vn: "หม่าล่า/ต้มยำข้น", n: "บุฟเฟ่ต์ น้ำซุปหม่าล่า/ต้มยำน้ำข้น (ที่ซด)", a: "mala broth tee noi ตี๋น้อย ซุป", unit: "ml", per: 100, def: 200, pc: ["ถ้วย", 200], k: 60, p: 1, c: 2, f: 5, na: 600 },
+    { id: "suki_sauce", g: "dip", vn: "น้ำจิ้มสุกี้", n: "บุฟเฟ่ต์ น้ำจิ้มสุกี้", a: "suki sauce dip น้ำจิ้ม", unit: "g", per: 100, def: 30, pc: ["ช้อนโต๊ะ", 15], k: 120, p: 1, c: 28, f: 0.5, na: 1800 },
+    { id: "sesame_dip", g: "dip", vn: "น้ำจิ้มงา", n: "บุฟเฟ่ต์ น้ำจิ้มงา (ชาบู)", a: "sesame sauce goma dip น้ำจิ้ม", unit: "g", per: 100, def: 30, pc: ["ช้อนโต๊ะ", 15], k: 350, p: 6, c: 20, f: 28, na: 1500 },
+    { id: "ponzu", g: "dip", vn: "พอนสึ", n: "บุฟเฟ่ต์ พอนสึ", a: "ponzu dip น้ำจิ้ม", unit: "g", per: 100, def: 30, pc: ["ช้อนโต๊ะ", 15], k: 50, p: 3, c: 8, f: 0, na: 3500 },
+    { id: "bf_seafood_dip", g: "dip", vn: "ซีฟู้ด/หมูกระทะ", n: "บุฟเฟ่ต์ น้ำจิ้มซีฟู้ด/น้ำจิ้มหมูกระทะ", a: "seafood dip mookata น้ำจิ้ม", unit: "g", per: 100, def: 30, pc: ["ช้อนโต๊ะ", 15], k: 90, p: 1, c: 20, f: 0.5, na: 2000 },
+
+    { id: "sushi_nigiri", g: "bf_jp", vn: "ซูชิ", n: "บุฟเฟ่ต์ ซูชิหน้าปลา/แซลมอน (ชาบูชิ ซูชิโร่)", a: "sushi nigiri salmon sushiro shabushi", unit: "g", per: 100, def: 80, pc: ["คำ", 40], k: 150, p: 6, c: 22, f: 3.5, na: 300 },
+    { id: "bf_tempura", g: "bf_jp", vn: "เทมปุระ", n: "บุฟเฟ่ต์ เทมปุระกุ้ง", a: "tempura shabushi", unit: "g", per: 100, def: 60, pc: ["ชิ้น", 30], k: 230, p: 10, c: 18, f: 13, na: 300 },
+    { id: "bf_rice", n: "บุฟเฟ่ต์ ข้าวสวย", a: "rice buffet", unit: "g", per: 100, def: 150, pc: ["ถ้วย", 150], k: 130, p: 2.7, c: 28, f: 0.3 },
+    { id: "buffet_icecream", n: "บุฟเฟ่ต์ ไอศกรีม", a: "ice cream buffet ของหวาน", unit: "g", per: 100, def: 60, pc: ["สกู๊ป", 60], k: 200, p: 3.5, c: 24, f: 10 },
   ]),
   ...cat("veg", [
     { id: "broccoli", n: "บร็อคโคลี่ (ดิบ/ลวก)", a: "broccoli", unit: "g", per: 100, def: 100, k: 34, p: 2.8, c: 6.6, f: 0.4, na: 33 },

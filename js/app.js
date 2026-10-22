@@ -753,7 +753,7 @@ function renderFood() {
       <div class="field"><input type="search" id="fq" placeholder="ค้นหา เช่น อกไก่ ข้าว ไข่ egg" aria-label="ค้นหาอาหาร" value="${esc(state.fq || "")}" style="width:100%" autocomplete="off"></div>
       <div class="chips fcats" role="group" aria-label="หมวดอาหาร">${foodCats().map(([k, n]) => `<button class="chipbtn" data-fcat="${k}" aria-pressed="${(state.fcat || "all") === k}">${esc(n)}</button>`).join("")}</div>
       <div class="flist" id="flist" role="listbox" aria-label="รายการอาหาร"></div>
-      <div class="fpicked"><span class="label">เลือกอยู่</span> <b id="fname"></b><div class="chips" id="fvars"></div></div>
+      <div class="fpicked"><span class="label">เลือกอยู่</span> <b id="fname"></b><div class="chips" id="fvars"></div><div class="chips" id="fsizes"></div></div>
       <div class="seg" id="fmode" role="group" aria-label="ใส่ปริมาณเป็น">
         <button data-fmode="g" aria-pressed="false">กรัม</button><button data-fmode="pc" aria-pressed="false" id="fmodePc">หน่วย</button>
       </div>
@@ -810,11 +810,14 @@ function renderFood() {
   const fqty = $("fqty");
   // The picked food lives here; the list below the search box only changes it.
   const fsel = { value: (s.lastFood && findFood(s.lastFood)) ? s.lastFood : FOODS[0].id };
+  // Foods with several sizes (buffet trays) log in the chosen size, kept per food for this session.
+  state.sizeIx ||= {};
+  const cur = () => { const f = findFood(fsel.value); return f.sizes ? { ...f, pc: f.sizes[state.sizeIx[f.id] ?? 1] } : f; };
   // Grams or pieces: one global preference; foods without a piece size always use their own unit.
   const modeFor = (f) => (f.pc && s.foodMode === "pc" ? "pc" : "g");
   const unitFor = (f) => (modeFor(f) === "pc" ? f.pc[0] : f.unit);
   const syncFood = (resetQty) => {
-    const f = findFood(fsel.value), mode = modeFor(f);
+    const f = cur(), mode = modeFor(f);
     if (resetQty) fqty.value = mode === "pc" ? Math.max(1, Math.round(f.def / f.pc[1])) : f.def;
     $("funit").textContent = unitFor(f);
     $("fmode").hidden = !f.pc;
@@ -825,12 +828,13 @@ function renderFood() {
     $("fprev").textContent = `${mode === "pc" ? `≈ ${Math.round(baseQty(f, q, mode))} ${f.unit} · ` : ""}${v.kcal} kcal · โปรตีน ${v.p} g · คาร์บ ${v.c} g · ไขมัน ${v.f} g${v.na != null ? ` · โซเดียม ${v.na} mg` : ""}`;
   };
   document.querySelectorAll("[data-fmode]").forEach((b) => b.onclick = async () => {
-    const f = findFood(fsel.value), from = modeFor(f), q = Number(fqty.value) || 0;
+    const f = cur(), from = modeFor(f), q = Number(fqty.value) || 0;
     state.settings.foodMode = b.dataset.fmode;
     await S.set("settings", state.settings);
     const to = modeFor(f);
     if (from !== to && f.pc) fqty.value = to === "pc" ? Math.round((q / f.pc[1]) * 2) / 2 || 1 : Math.round(q * f.pc[1]);
     syncFood(false);
+    drawPicked();
   });
   const perHint = (f) => { const v = portion(f, f.pc ? f.pc[1] : f.per); return `${v.kcal} kcal/${f.pc ? f.pc[0] : `${f.per} ${f.unit}`} · P${Math.round(v.p)}`; };
   const drawList = () => {
@@ -848,6 +852,16 @@ function renderFood() {
     $("fname").textContent = f.n;
     $("fvars").innerHTML = vars.length > 1 ? vars.map((v) => `<button class="chipbtn" data-fvar="${v.id}" aria-pressed="${v.id === f.id}">${esc(v.vn || v.n)}</button>`).join("") : "";
     $("fvars").querySelectorAll("[data-fvar]").forEach((b) => b.onclick = () => pick(b.dataset.fvar));
+    const ix = state.sizeIx[f.id] ?? 1;
+    $("fsizes").innerHTML = f.sizes ? f.sizes.map(([u, g], i) => `<button class="chipbtn" data-fsize="${i}" aria-pressed="${s.foodMode === "pc" && i === ix}">${esc(u)} ~${g} g · ${portion(f, g).kcal} kcal</button>`).join("") : "";
+    $("fsizes").querySelectorAll("[data-fsize]").forEach((b) => b.onclick = async () => {
+      state.sizeIx[f.id] = +b.dataset.fsize;
+      state.settings.foodMode = "pc";
+      await S.set("settings", state.settings);
+      fqty.value = 1;
+      drawPicked();
+      syncFood(false);
+    });
   };
   const pick = (id) => {
     fsel.value = id;
@@ -866,7 +880,7 @@ function renderFood() {
   syncFood(true);
   fqty.oninput = () => syncFood(false);
   $("fadd").onclick = async () => {
-    const f = findFood(fsel.value), q = Number(fqty.value);
+    const f = cur(), q = Number(fqty.value);
     if (!q || q <= 0) { $("fprev").textContent = "กรอกปริมาณมากกว่า 0"; return; }
     state.settings.lastFood = f.id;
     await S.set("settings", state.settings);
