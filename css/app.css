@@ -371,3 +371,12 @@ details.exnote .notein{width:100%;margin-top:8px;padding:8px 10px;border-radius:
 .cardio-card{margin-top:12px}
 .cardio-card h3{margin:0}
 .cardio-card .dp-bar{margin:8px 0}
+.fcats{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.fcats .chipbtn{white-space:nowrap;flex:none}
+.flist{max-height:280px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;margin:8px 0;background:var(--sunk)}
+.frow{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:9px 12px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;font:inherit;font-size:14px;cursor:pointer}
+.frow:last-child{border-bottom:0}
+.frow .mono{font-size:12px;opacity:.7;white-space:nowrap}
+.frow[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.flist .note{padding:10px 12px;margin:0}
+.fpicked{margin:4px 0 8px}

@@ -1,7 +1,7 @@
 import { PHASES, DAYS, SWAPS, altFor, altName } from "./program.js";
 import * as L from "./logic.js";
 import * as S from "./store.js";
-import { FOODS, foodById as builtinFood, portion, baseQty } from "./foods.js";
+import { FOODS, CATS, foodById as builtinFood, portion, baseQty, variantsOf, searchFoods } from "./foods.js";
 import { MOVE_OF, mountMove } from "./moves.js";
 
 const $ = (id) => document.getElementById(id);
@@ -619,6 +619,7 @@ function bulkGuard() {
 const findFood = (id) => state.myfoods.find((f) => f.id === id) || builtinFood(id);
 const UNITS = ["g", "ml", "ถุง", "ซอง", "ชิ้น", "แผ่น", "กล่อง", "ขวด", "ถ้วย", "จาน", "ลูก", "ฟอง"];
 const NA_MAX = 2000; // WHO daily sodium limit, mg
+const foodCats = () => [["all", "ทั้งหมด"], ...(state.myfoods.length ? [["mine", "ของฉัน"]] : []), ...CATS];
 let myDelArm = null;
 
 async function addFood(entry) {
@@ -749,12 +750,10 @@ function renderFood() {
 
     <div class="card">
       <h3>เพิ่มอาหาร</h3>
-      <div class="field">
-        <select id="fsel" aria-label="อาหาร">
-          ${state.myfoods.length ? `<optgroup label="อาหารของฉัน">${state.myfoods.map((f) => `<option value="${f.id}">${esc(f.n)}</option>`).join("")}</optgroup>` : ""}
-          <optgroup label="รายการในแอป">${FOODS.map((f) => `<option value="${f.id}">${esc(f.n)}</option>`).join("")}</optgroup>
-        </select>
-      </div>
+      <div class="field"><input type="search" id="fq" placeholder="ค้นหา เช่น อกไก่ ข้าว ไข่ egg" aria-label="ค้นหาอาหาร" value="${esc(state.fq || "")}" style="width:100%" autocomplete="off"></div>
+      <div class="chips fcats" role="group" aria-label="หมวดอาหาร">${foodCats().map(([k, n]) => `<button class="chipbtn" data-fcat="${k}" aria-pressed="${(state.fcat || "all") === k}">${esc(n)}</button>`).join("")}</div>
+      <div class="flist" id="flist" role="listbox" aria-label="รายการอาหาร"></div>
+      <div class="fpicked"><span class="label">เลือกอยู่</span> <b id="fname"></b><div class="chips" id="fvars"></div></div>
       <div class="seg" id="fmode" role="group" aria-label="ใส่ปริมาณเป็น">
         <button data-fmode="g" aria-pressed="false">กรัม</button><button data-fmode="pc" aria-pressed="false" id="fmodePc">หน่วย</button>
       </div>
@@ -808,7 +807,9 @@ function renderFood() {
       </div>
     </div>`;
 
-  const fsel = $("fsel"), fqty = $("fqty");
+  const fqty = $("fqty");
+  // The picked food lives here; the list below the search box only changes it.
+  const fsel = { value: (s.lastFood && findFood(s.lastFood)) ? s.lastFood : FOODS[0].id };
   // Grams or pieces: one global preference; foods without a piece size always use their own unit.
   const modeFor = (f) => (f.pc && s.foodMode === "pc" ? "pc" : "g");
   const unitFor = (f) => (modeFor(f) === "pc" ? f.pc[0] : f.unit);
@@ -831,9 +832,38 @@ function renderFood() {
     if (from !== to && f.pc) fqty.value = to === "pc" ? Math.round((q / f.pc[1]) * 2) / 2 || 1 : Math.round(q * f.pc[1]);
     syncFood(false);
   });
-  if (s.lastFood && findFood(s.lastFood)) fsel.value = s.lastFood;
+  const perHint = (f) => { const v = portion(f, f.pc ? f.pc[1] : f.per); return `${v.kcal} kcal/${f.pc ? f.pc[0] : `${f.per} ${f.unit}`} · P${Math.round(v.p)}`; };
+  const drawList = () => {
+    const q = state.fq || "", c = state.fcat || "all";
+    const pool = q ? [...state.myfoods, ...FOODS] : c === "mine" ? state.myfoods : c === "all" ? [...state.myfoods, ...FOODS] : FOODS.filter((f) => f.cat === c);
+    const hits = searchFoods(pool, q), shown = hits.slice(0, 60);
+    $("flist").innerHTML = shown.length
+      ? shown.map((f) => `<button class="frow" role="option" data-fpick="${f.id}" aria-selected="${f.id === fsel.value}"><span>${esc(f.n)}</span><span class="mono">${perHint(f)}</span></button>`).join("")
+        + (hits.length > shown.length ? `<p class="note">อีก ${hits.length - shown.length} รายการ พิมพ์ค้นให้แคบลง</p>` : "")
+      : `<p class="note">ไม่เจอ "${esc(q)}" ลองคำอื่น หรือเพิ่มเองในกล่อง "เพิ่มอาหารของฉัน" ด้านล่าง</p>`;
+    $("flist").querySelectorAll("[data-fpick]").forEach((b) => b.onclick = () => pick(b.dataset.fpick));
+  };
+  const drawPicked = () => {
+    const f = findFood(fsel.value), vars = variantsOf(f);
+    $("fname").textContent = f.n;
+    $("fvars").innerHTML = vars.length > 1 ? vars.map((v) => `<button class="chipbtn" data-fvar="${v.id}" aria-pressed="${v.id === f.id}">${esc(v.vn || v.n)}</button>`).join("") : "";
+    $("fvars").querySelectorAll("[data-fvar]").forEach((b) => b.onclick = () => pick(b.dataset.fvar));
+  };
+  const pick = (id) => {
+    fsel.value = id;
+    drawPicked();
+    $("flist").querySelectorAll("[data-fpick]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.fpick === id)));
+    syncFood(true);
+  };
+  $("fq").oninput = () => { state.fq = $("fq").value; drawList(); };
+  document.querySelectorAll("[data-fcat]").forEach((b) => b.onclick = () => {
+    state.fcat = b.dataset.fcat; state.fq = ""; $("fq").value = "";
+    document.querySelectorAll("[data-fcat]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    drawList();
+  });
+  drawList();
+  drawPicked();
   syncFood(true);
-  fsel.onchange = () => syncFood(true);
   fqty.oninput = () => syncFood(false);
   $("fadd").onclick = async () => {
     const f = findFood(fsel.value), q = Number(fqty.value);

@@ -214,3 +214,19 @@ test("activity level moves the calorie target and carbs keep a 3 g/kg floor", ()
   assert.equal(mid.cMin, 237);
   assert.ok(low.c > low.cMin);
 });
+
+test("food list: unique ids, known categories, variant groups have labels, search finds Thai and English", async () => {
+  const { FOODS, CATS, variantsOf, searchFoods } = await import("../js/foods.js");
+  const ids = FOODS.map((f) => f.id);
+  assert.equal(new Set(ids).size, ids.length);
+  const cats = new Set(CATS.map((c) => c[0]));
+  for (const f of FOODS) {
+    assert.ok(cats.has(f.cat), f.id);
+    assert.ok(f.k >= 0 && f.per > 0 && f.def > 0, f.id);
+    if (f.g) { assert.ok(variantsOf(f).length > 1, `${f.id} alone in ${f.g}`); assert.ok(f.vn, f.id); }
+  }
+  assert.ok(searchFoods(FOODS, "อกไก่").some((f) => f.id === "chicken_breast"));
+  assert.equal(searchFoods(FOODS, "olive")[0].id, "olive_oil");
+  assert.equal(searchFoods(FOODS, "ไข่")[0].n.startsWith("ไข่"), true);
+  assert.equal(searchFoods(FOODS, "zzzz").length, 0);
+});
