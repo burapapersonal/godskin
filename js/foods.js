@@ -120,6 +120,20 @@ export const FOODS = [
     // No label yet; estimated from typical minced pork rolls (~25 g a piece).
     { id: "seven_seaweed_pork", n: "หมูห่อสาหร่าย เซเว่น (ค่าประมาณ)", a: "seaweed pork 7-eleven", unit: "g", per: 100, def: 125, pc: ["ชิ้น", 25], k: 200, p: 14, c: 8, f: 12 },
     { id: "onigiri", n: "ข้าวปั้นโอนิกิริ ทูน่ามายองเนส (ประมาณ)", a: "onigiri rice ball", unit: "g", per: 100, def: 100, pc: ["ชิ้น", 100], k: 180, p: 4.5, c: 33, f: 3.5, na: 450 },
+    // 7-Eleven ready meals and snacks without a label photo yet: typical pack values, treat as estimates.
+    { id: "seven_krapao", g: "seven_box", vn: "กะเพรา", n: "ข้าวกะเพราไก่/หมู กล่อง เซเว่น (ประมาณ)", a: "7-eleven ezygo krapao", unit: "g", per: 100, def: 220, pc: ["กล่อง", 220], k: 157, p: 6.7, c: 24, f: 3.8, na: 450 },
+    { id: "seven_garlic_pork", g: "seven_box", vn: "หมูทอดกระเทียม", n: "ข้าวหมูทอดกระเทียม กล่อง เซเว่น (ประมาณ)", a: "7-eleven garlic pork", unit: "g", per: 100, def: 220, pc: ["กล่อง", 220], k: 182, p: 7, c: 24, f: 6.5, na: 420 },
+    { id: "seven_fried_rice", g: "seven_box", vn: "ข้าวผัด", n: "ข้าวผัด กล่อง เซเว่น (ประมาณ)", a: "7-eleven fried rice", unit: "g", per: 100, def: 220, pc: ["กล่อง", 220], k: 164, p: 5.5, c: 26, f: 4, na: 400 },
+    { id: "seven_kmk", g: "seven_box", vn: "ข้าวมันไก่", n: "ข้าวมันไก่ กล่อง เซเว่น (ประมาณ)", a: "7-eleven chicken rice", unit: "g", per: 100, def: 250, pc: ["กล่อง", 250], k: 180, p: 7.5, c: 24, f: 6, na: 400 },
+    { id: "seven_sticky_pork", g: "seven_box", vn: "ข้าวเหนียวหมูทอด", n: "ข้าวเหนียวหมูทอด เซเว่น (ประมาณ)", a: "7-eleven sticky rice pork", unit: "g", per: 100, def: 150, pc: ["แพ็ค", 150], k: 253, p: 10, c: 35, f: 8, na: 450 },
+    { id: "seven_sandwich", n: "แซนด์วิช แฮมชีส/ทูน่า เซเว่น (ประมาณ)", a: "7-eleven sandwich", unit: "g", per: 100, def: 100, pc: ["ชิ้น", 100], k: 250, p: 11, c: 27, f: 11, na: 550 },
+    { id: "seven_salapao", n: "ซาลาเปาหมูสับ เซเว่น (ประมาณ)", a: "7-eleven bun salapao", unit: "g", per: 100, def: 100, pc: ["ลูก", 100], k: 230, p: 7, c: 38, f: 5.5, na: 350 },
+    { id: "seven_gyoza", n: "เกี๊ยวซ่า ซีพี เซเว่น (ประมาณ)", a: "7-eleven gyoza dumpling", unit: "g", per: 100, def: 120, pc: ["ถาด", 120], k: 217, p: 8, c: 24, f: 10, na: 600 },
+    { id: "seven_karaage", n: "ไก่คาราอาเกะ/ไก่ป๊อป ซีพี เซเว่น (ประมาณ)", a: "7-eleven karaage fried chicken", unit: "g", per: 100, def: 110, pc: ["ถาด", 110], k: 255, p: 15, c: 15, f: 15, na: 650 },
+    { id: "seven_jumbo_sausage", n: "ไส้กรอกจัมโบ้ เซเว่น (ประมาณ)", a: "7-eleven sausage jumbo", unit: "g", per: 100, def: 60, pc: ["ชิ้น", 60], k: 280, p: 11, c: 6, f: 24, na: 950 },
+    { id: "crab_stick", n: "ปูอัด", a: "crab stick kani", unit: "g", per: 100, def: 60, pc: ["ชิ้น", 15], k: 95, p: 7.6, c: 15, f: 0.5, na: 840 },
+    { id: "jok_cup", n: "โจ๊กคัพ กึ่งสำเร็จรูป (ประมาณ)", a: "jok cup instant congee knorr", unit: "g", per: 100, def: 35, pc: ["ถ้วย", 35], k: 370, p: 8, c: 70, f: 6, na: 2600 },
+    { id: "protein_drink", n: "นม/เครื่องดื่มโปรตีนสูง พร้อมดื่ม (ประมาณ)", a: "protein milk drink meiji", unit: "ml", per: 100, def: 350, pc: ["ขวด", 350], k: 55, p: 6, c: 7, f: 0.5, na: 60 },
     { id: "mama", g: "mama", vn: "ซองเล็ก 60 g", n: "มาม่า รวมเครื่องปรุง", a: "mama instant noodle", unit: "g", per: 100, def: 60, pc: ["ซอง", 60], k: 467, p: 10, c: 63.3, f: 18.3, na: 2500 },
     // Mama OK orange pack label: 85 g = 390 kcal, F16, P7, C55, Na1910.
     { id: "mama_tomyum", g: "mama", vn: "OK ซองส้ม 85 g", n: "มาม่า OK ซองส้ม 85 g (ฉลาก)", a: "mama ok instant noodle", unit: "g", per: 100, def: 85, pc: ["ซอง", 85], k: 459, p: 8.2, c: 64.7, f: 18.8, na: 2247 },
