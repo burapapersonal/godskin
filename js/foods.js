@@ -13,6 +13,7 @@ export const CATS = [
   ["ready", "เซเว่น สำเร็จรูป"],
   ["fast", "ฟาสต์ฟู้ด"],
   ["buffet", "บุฟเฟ่ต์ ชาบู ปิ้งย่าง"],
+  ["kbbq", "บุฟเฟ่ต์เกาหลี"],
   ["veg", "ผัก"],
   ["fruit", "ผลไม้"],
   ["snack", "ขนม ถั่ว"],
@@ -25,6 +26,9 @@ const cat = (c, list) => list.map((f) => ({ ...f, cat: c }));
 // Buffet trays: raw weight per small / medium / large tray; `sizes` lets the user pick one.
 const TRAYS = [["ถาดเล็ก", 50], ["ถาดกลาง", 100], ["ถาดใหญ่", 200]];
 const TRAY = { unit: "g", per: 100, def: 100, pc: TRAYS[1], sizes: TRAYS };
+// Buffet noodle and soup bowls (cooked weight, soup included).
+const BOWLS = [["ถ้วยเล็ก", 150], ["ถ้วยกลาง", 250], ["ชามใหญ่", 400]];
+const BOWL = { unit: "g", per: 100, def: 250, pc: BOWLS[1], sizes: BOWLS };
 
 export const FOODS = [
   ...cat("carb", [
@@ -263,6 +267,50 @@ export const FOODS = [
     { id: "bf_tempura", g: "bf_jp", vn: "เทมปุระ", n: "บุฟเฟ่ต์ เทมปุระกุ้ง", a: "tempura shabushi", unit: "g", per: 100, def: 60, pc: ["ชิ้น", 30], k: 230, p: 10, c: 18, f: 13, na: 300 },
     { id: "bf_rice", n: "บุฟเฟ่ต์ ข้าวสวย", a: "rice buffet", unit: "g", per: 100, def: 150, pc: ["ถ้วย", 150], k: 130, p: 2.7, c: 28, f: 0.3 },
     { id: "buffet_icecream", n: "บุฟเฟ่ต์ ไอศกรีม", a: "ice cream buffet ของหวาน", unit: "g", per: 100, def: 60, pc: ["สกู๊ป", 60], k: 200, p: 3.5, c: 24, f: 10 },
+  ]),
+  // Korean BBQ buffet (Gangnam BBQ, Kakao, Bulgogi Brothers style); all estimates.
+  ...cat("kbbq", [
+    { id: "kb_pork_neck", g: "kb_pork", vn: "สันคอดรายเอจ", n: "บุฟเฟ่ต์เกาหลี หมูสันคอ/สันคอดรายเอจ", a: "korean bbq gangnam pork neck dry aged moksal หมู", ...TRAY, k: 250, p: 16, c: 0, f: 21, na: 70 },
+    { id: "kb_samgyeop", g: "kb_pork", vn: "สามชั้นหนา", n: "บุฟเฟ่ต์เกาหลี หมูสามชั้นหนา (ซัมกยอบซัล)", a: "korean bbq samgyeopsal pork belly หมู", ...TRAY, k: 518, p: 9.3, c: 0, f: 53, na: 50 },
+    { id: "kb_pork_gochujang", g: "kb_pork", vn: "หมักโคชูจัง", n: "บุฟเฟ่ต์เกาหลี หมูหมักโคชูจัง", a: "korean bbq spicy pork gochujang dwaeji bulgogi หมู", ...TRAY, k: 230, p: 16, c: 7, f: 15, na: 600 },
+    { id: "kb_pork_galbi", g: "kb_pork", vn: "ซี่โครงหมูหมัก", n: "บุฟเฟ่ต์เกาหลี ซี่โครงหมูหมัก (ดเวจีคาลบี)", a: "korean bbq pork galbi rib หมู", ...TRAY, k: 270, p: 15, c: 8, f: 20, na: 550 },
+    { id: "kb_bulgogi", g: "kb_beef", vn: "บูลโกกิ", n: "บุฟเฟ่ต์เกาหลี เนื้อบูลโกกิ", a: "korean bbq bulgogi beef เนื้อ", ...TRAY, k: 220, p: 17, c: 9, f: 13, na: 550 },
+    { id: "kb_galbi", g: "kb_beef", vn: "คาลบีหมัก", n: "บุฟเฟ่ต์เกาหลี เนื้อคาลบีหมัก (ติดมัน)", a: "korean bbq beef galbi short rib เนื้อ", ...TRAY, k: 290, p: 16, c: 7, f: 22, na: 550 },
+    { id: "kb_chadol", g: "kb_beef", vn: "ชาดอลแผ่นบาง", n: "บุฟเฟ่ต์เกาหลี เนื้อชาดอล (เนื้อติดมันแผ่นบาง)", a: "korean bbq chadolbaegi brisket เนื้อ", ...TRAY, k: 330, p: 16, c: 0, f: 29, na: 60 },
+    { id: "kb_dakgalbi", n: "บุฟเฟ่ต์เกาหลี ไก่หมักเผ็ด (ดักคาลบี)", a: "korean bbq dakgalbi chicken spicy ไก่", ...TRAY, k: 170, p: 17, c: 7, f: 8, na: 600 },
+
+    { id: "kb_chicken_plain", g: "kb_fried", vn: "ทอดเปล่า", n: "บุฟเฟ่ต์เกาหลี ไก่ทอดเกาหลี ทอดเปล่า", a: "korean fried chicken kfc ไก่ทอด", unit: "g", per: 100, def: 120, pc: ["ชิ้นเล็ก", 30], k: 270, p: 18, c: 12, f: 17, na: 450 },
+    { id: "kb_chicken_yangnyeom", g: "kb_fried", vn: "ซอสหวานเผ็ด", n: "บุฟเฟ่ต์เกาหลี ไก่ทอดซอสหวานเผ็ด (ยังนยอม)", a: "korean fried chicken yangnyeom spicy ไก่ทอด", unit: "g", per: 100, def: 120, pc: ["ชิ้นเล็ก", 30], k: 290, p: 15, c: 22, f: 16, na: 600 },
+    { id: "kb_chicken_soy", g: "kb_fried", vn: "ซอสโชยุกระเทียม", n: "บุฟเฟ่ต์เกาหลี ไก่ทอดซอสโชยุกระเทียม", a: "korean fried chicken soy garlic ไก่ทอด", unit: "g", per: 100, def: 120, pc: ["ชิ้นเล็ก", 30], k: 280, p: 16, c: 18, f: 16, na: 650 },
+
+    { id: "kb_jjajang", g: "kb_noodle", vn: "จาจังมยอน", n: "บุฟเฟ่ต์เกาหลี จาจังมยอน (บะหมี่ซอสดำ)", a: "jjajangmyeon black bean noodle จาจัง เส้น", ...BOWL, k: 135, p: 4.5, c: 21, f: 4, na: 380 },
+    { id: "kb_ramyeon", g: "kb_noodle", vn: "รามยอน", n: "บุฟเฟ่ต์เกาหลี รามยอน (รวมน้ำ)", a: "ramyeon ramen shin มาม่าเกาหลี เส้น", ...BOWL, k: 90, p: 2, c: 12, f: 3.8, na: 450 },
+    { id: "kb_jjamppong", g: "kb_noodle", vn: "จัมปง", n: "บุฟเฟ่ต์เกาหลี จัมปง บะหมี่ทะเลเผ็ด (รวมน้ำ)", a: "jjamppong spicy seafood noodle เส้น", ...BOWL, k: 70, p: 4, c: 8, f: 2.5, na: 450 },
+    { id: "kb_naengmyeon", g: "kb_noodle", vn: "นังมยอน", n: "บุฟเฟ่ต์เกาหลี นังมยอน บะหมี่เย็น (รวมน้ำ)", a: "naengmyeon cold noodle เส้น", ...BOWL, k: 80, p: 2.5, c: 16, f: 0.5, na: 350 },
+
+    { id: "kb_jumeokbap", n: "บุฟเฟ่ต์เกาหลี ข้าวปั้นเกาหลี (จูมอกบับ)", a: "jumeokbap rice ball onigiri ข้าวปั้น", unit: "g", per: 100, def: 180, pc: ["ก้อน", 90], k: 175, p: 4, c: 32, f: 3.5, na: 350 },
+    { id: "kb_kimbap", n: "บุฟเฟ่ต์เกาหลี คิมบับ", a: "kimbap gimbap ข้าวห่อสาหร่าย", unit: "g", per: 100, def: 125, pc: ["ชิ้น", 25], k: 160, p: 5, c: 26, f: 4, na: 400 },
+    { id: "kb_bibimbap", n: "บุฟเฟ่ต์เกาหลี บิบิมบับ", a: "bibimbap ข้าวยำเกาหลี", unit: "g", per: 100, def: 250, pc: ["ถ้วย", 250], k: 140, p: 5, c: 22, f: 4, na: 350 },
+    { id: "kb_kimchi_rice", n: "บุฟเฟ่ต์เกาหลี ข้าวผัดกิมจิ", a: "kimchi fried rice ข้าวผัด", unit: "g", per: 100, def: 200, pc: ["ถ้วย", 200], k: 165, p: 5, c: 25, f: 5, na: 500 },
+    { id: "kb_tteokbokki", n: "บุฟเฟ่ต์เกาหลี ต๊อกบกกี", a: "tteokbokki rice cake ต็อก", unit: "g", per: 100, def: 150, pc: ["ถ้วย", 150], k: 180, p: 3.5, c: 38, f: 2, na: 600 },
+    { id: "kb_pizza", n: "บุฟเฟ่ต์เกาหลี พิซซ่าชีสถาดเล็ก", a: "pizza cheese mini พิซซ่า", unit: "g", per: 100, def: 150, pc: ["ถาดเล็ก", 150], k: 270, p: 11, c: 32, f: 11, na: 600 },
+    { id: "kb_mandu", n: "บุฟเฟ่ต์เกาหลี เกี๊ยวทอด (มันดู)", a: "mandu dumpling gyoza เกี๊ยวซ่า", unit: "g", per: 100, def: 100, pc: ["ชิ้น", 25], k: 240, p: 9, c: 25, f: 11, na: 450 },
+    { id: "kb_odeng", n: "บุฟเฟ่ต์เกาหลี โอเด้ง (ลูกชิ้นปลาแผ่น)", a: "odeng eomuk fish cake", unit: "g", per: 100, def: 60, pc: ["ไม้", 60], k: 140, p: 9, c: 14, f: 5, na: 700 },
+    { id: "kb_corn_cheese", n: "บุฟเฟ่ต์เกาหลี คอร์นชีส", a: "corn cheese ข้าวโพดชีส", unit: "g", per: 100, def: 100, pc: ["ถ้วยเล็ก", 100], k: 200, p: 6, c: 15, f: 13, na: 400 },
+    { id: "kb_cheese_dip", n: "บุฟเฟ่ต์เกาหลี ชีสเยิ้มรอบกระทะ", a: "cheese fondue dip ชีส", unit: "g", per: 100, def: 50, pc: ["ทัพพี", 50], k: 300, p: 15, c: 5, f: 25, na: 900 },
+    { id: "kb_egg_steamed", n: "บุฟเฟ่ต์เกาหลี ไข่ตุ๋นเกาหลี (เครันจิม)", a: "gyeran jjim steamed egg ไข่ตุ๋น", unit: "g", per: 100, def: 200, pc: ["ถ้วย", 200], k: 80, p: 6.5, c: 1.5, f: 5, na: 350 },
+
+    { id: "kb_kimchi_stew", g: "kb_soup", vn: "ซุปกิมจิ", n: "บุฟเฟ่ต์เกาหลี ซุปกิมจิ (กิมจิจิแก)", a: "kimchi jjigae stew soup ซุป", ...BOWL, k: 45, p: 3, c: 3, f: 2.5, na: 450 },
+    { id: "kb_doenjang", g: "kb_soup", vn: "ซุปเต้าเจี้ยว", n: "บุฟเฟ่ต์เกาหลี ซุปเต้าเจี้ยว (ทเวนจังจิแก)", a: "doenjang jjigae soybean stew soup ซุป", ...BOWL, k: 40, p: 3, c: 3, f: 1.5, na: 500 },
+
+    { id: "kb_green_onion", g: "kb_side", vn: "ยำต้นหอม", n: "บุฟเฟ่ต์เกาหลี ยำต้นหอม (พาจอรี)", a: "pajeori green onion salad banchan เครื่องเคียง", unit: "g", per: 100, def: 50, pc: ["ถ้วยเล็ก", 50], k: 60, p: 1.5, c: 6, f: 3.5, na: 400 },
+    { id: "kb_namul", g: "kb_side", vn: "นามูล", n: "บุฟเฟ่ต์เกาหลี ผักเคียงคลุกงา (นามูล)", a: "namul bean sprout spinach banchan เครื่องเคียง", unit: "g", per: 100, def: 50, pc: ["ถ้วยเล็ก", 50], k: 70, p: 2.5, c: 5, f: 4.5, na: 350 },
+    { id: "kb_garlic", g: "kb_side", vn: "กระเทียมย่าง", n: "บุฟเฟ่ต์เกาหลี กระเทียมย่าง (ในน้ำมัน)", a: "grilled garlic กระเทียม", unit: "g", per: 100, def: 30, pc: ["กำมือ", 30], k: 200, p: 5, c: 28, f: 8, na: 15 },
+    { id: "kb_lettuce", g: "kb_side", vn: "ผักห่อ", n: "บุฟเฟ่ต์เกาหลี ผักกาดหอม/ใบงา (ห่อหมู)", a: "lettuce perilla ssam ผักห่อ", unit: "g", per: 100, def: 50, pc: ["กำมือ", 50], k: 18, p: 1.4, c: 3, f: 0.3, na: 20 },
+
+    { id: "kb_ssamjang", g: "kb_dip", vn: "ซัมจัง", n: "บุฟเฟ่ต์เกาหลี ซัมจัง (เต้าเจี้ยวพริก)", a: "ssamjang dip sauce น้ำจิ้ม", unit: "g", per: 100, def: 18, pc: ["ช้อนโต๊ะ", 18], k: 200, p: 8, c: 28, f: 7, na: 2600 },
+    { id: "kb_sesame_salt", g: "kb_dip", vn: "น้ำมันงาเกลือ", n: "บุฟเฟ่ต์เกาหลี น้ำมันงาใส่เกลือ", a: "gireumjang sesame oil salt dip น้ำจิ้ม", unit: "g", per: 100, def: 5, pc: ["ช้อนชา", 5], k: 820, p: 0, c: 0, f: 90, na: 3000 },
+    { id: "kb_soju", n: "บุฟเฟ่ต์เกาหลี โซจู", a: "soju เหล้า alcohol", unit: "ml", per: 100, def: 50, pc: ["แก้วช็อต", 50], k: 120, p: 0, c: 1, f: 0 },
   ]),
   ...cat("veg", [
     { id: "broccoli", n: "บร็อคโคลี่ (ดิบ/ลวก)", a: "broccoli", unit: "g", per: 100, def: 100, k: 34, p: 2.8, c: 6.6, f: 0.4, na: 33 },
