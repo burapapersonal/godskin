@@ -33,6 +33,8 @@ const BOWL = { unit: "g", per: 100, def: 250, pc: BOWLS[1], sizes: BOWLS };
 export const FOODS = [
   ...cat("carb", [
     { id: "rice", g: "rice", vn: "ข้าวขาว", n: "ข้าวสวย (สุก)", a: "rice white", unit: "g", per: 100, def: 150, pc: ["ถ้วย", 150], k: 130, p: 2.7, c: 28, f: 0.3 },
+    // EZYGO steamed rice tray (label): 280 g = 410 kcal, P6, C95, F0.5, Na20.
+    { id: "rice_ezygo", g: "rice", vn: "EZYGO กล่อง", n: "ข้าวขาวหุงสุก EZYGO เซเว่น 280 g (ฉลาก)", a: "ezygo 7-eleven steamed rice box ข้าวกล่อง", unit: "g", per: 100, def: 280, pc: ["กล่อง", 280], k: 146.4, p: 2.14, c: 33.9, f: 0.18, na: 7 },
     { id: "rice_brown", g: "rice", vn: "ข้าวกล้อง", n: "ข้าวกล้อง (สุก)", a: "brown rice", unit: "g", per: 100, def: 150, pc: ["ถ้วย", 150], k: 123, p: 2.7, c: 26, f: 1 },
     { id: "riceberry", g: "rice", vn: "ไรซ์เบอร์รี่", n: "ข้าวไรซ์เบอร์รี่ (สุก)", a: "riceberry", unit: "g", per: 100, def: 150, pc: ["ถ้วย", 150], k: 130, p: 3, c: 27, f: 1 },
     { id: "sticky_rice", g: "rice", vn: "ข้าวเหนียว", n: "ข้าวเหนียวนึ่ง", a: "sticky rice", unit: "g", per: 100, def: 150, pc: ["ห่อ", 100], k: 230, p: 4.5, c: 51, f: 0.4 },
