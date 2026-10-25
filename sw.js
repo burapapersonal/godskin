@@ -1,5 +1,5 @@
 // Offline cache. Bump VERSION whenever app files change so phones pick up the new build.
-const VERSION = "godskin-v35";
+const VERSION = "godskin-v36";
 const SHELL = [
   "./", "index.html", "css/app.css", "js/app.js", "js/logic.js", "js/program.js", "js/store.js", "js/foods.js", "js/moves.js",
   "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png",
@@ -28,7 +28,8 @@ self.addEventListener("fetch", (e) => {
   }
   if (url.origin !== location.origin) return;
   // App files: network first so updates land quickly, cache when offline.
-  e.respondWith(fetch(req).then((res) => {
+  // no-cache: revalidate with the server so a fresh deploy is not hidden by the 10-minute HTTP cache.
+  e.respondWith(fetch(req, { cache: "no-cache" }).then((res) => {
     if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match("index.html"))));
