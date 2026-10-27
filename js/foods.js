@@ -186,6 +186,8 @@ export const FOODS = [
     { id: "moo_ping", n: "หมูปิ้ง", a: "grilled pork skewer", unit: "g", per: 100, def: 90, pc: ["ไม้", 30], k: 260, p: 18, c: 12, f: 15, na: 600 },
   ]),
   ...cat("ready", [
+    // Gourmet At Home mushroom soup pouch 170 g (label): 120 kcal, P2, C13, F7, Na450.
+    { id: "gah_mushroom_soup", n: "ซุปเห็ด Gourmet At Home ซอง 170 g (ฉลาก)", a: "mushroom soup cream tastemaker gourmet at home ซุปครีม", unit: "g", per: 100, def: 170, pc: ["ซอง", 170], k: 70.6, p: 1.18, c: 7.65, f: 4.12, na: 265 },
     // Shumai from the CP bag label (120 g): 300 kcal, P9 C21 F20, sodium 900 mg.
     { id: "seven_shumai", n: "ขนมจีบ เซเว่น", a: "shumai 7-eleven", unit: "g", per: 100, def: 120, pc: ["ถุง", 120], k: 250, p: 7.5, c: 17.5, f: 16.7, na: 750 },
     // No label yet; estimated from typical minced pork rolls (~25 g a piece).
@@ -379,6 +381,8 @@ export const FOODS = [
     { id: "avocado", n: "อะโวคาโด", a: "avocado", unit: "g", per: 100, def: 70, pc: ["ลูก", 140], k: 160, p: 2, c: 8.5, f: 14.7 },
   ]),
   ...cat("snack", [
+    // Lotus Biscoff 124 g bag (label): 600 kcal, F24, sugar 44, Na500; carb/protein from Lotus spec (72.6/4.9 per 100 g).
+    { id: "biscoff", n: "Lotus Biscoff บิสกิต (ฉลาก)", a: "lotus biscoff cookie biscuit คุกกี้", unit: "g", per: 100, def: 15.5, pc: ["ซองเล็ก (2 ชิ้น)", 15.5], k: 484, p: 4.9, c: 72.6, f: 19.4, na: 403 },
     // Skippy Super Chunk label: 1 tbsp (15 g) = 100 kcal, F8, P3, C4, Na70.
     { id: "skippy", n: "เนยถั่ว Skippy ซุปเปอร์ชังค์ (ฉลาก)", a: "peanut butter", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 15], k: 667, p: 20, c: 26.7, f: 53.3, na: 467 },
     { id: "almonds", g: "nuts", vn: "อัลมอนด์", n: "อัลมอนด์", a: "almond nuts", unit: "g", per: 100, def: 28, pc: ["กำมือ", 28], k: 579, p: 21, c: 22, f: 50 },
