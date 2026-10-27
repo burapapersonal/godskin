@@ -69,13 +69,18 @@ async function boot() {
   const dow = new Date().getDay();
   state.dayIdx = Math.max(0, DAYS.findIndex((d) => d.dow === dow));
   const hash = location.hash.slice(1);
-  if (["train", "cal", "goals", "food", "body", "check", "rules", "data"].includes(hash)) state.tab = hash;
+  state.tab = GROUP_OF[hash] ? hash : "today";
 
-  document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
-    state.tab = b.dataset.tab;
+  // Dock and sub-page buttons are redrawn, so listen once on the document.
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tab]");
+    if (!b) return;
+    state.tab = b.dataset.group ? lastSub[b.dataset.group] || b.dataset.tab : b.dataset.tab;
     history.replaceState(null, "", "#" + state.tab);
     renderTabs();
-  }));
+    const stacked = GROUPS[GROUP_OF[state.tab]].stack && !b.dataset.group;
+    if (stacked) $("p-" + state.tab).scrollIntoView({ block: "start" }); else window.scrollTo(0, 0);
+  });
   window.addEventListener("hashchange", () => {
     const h = location.hash.slice(1);
     if (document.getElementById("p-" + h) && h !== state.tab) { state.tab = h; renderTabs(); }
@@ -90,10 +95,73 @@ function renderAll() {
   renderWeeks();
   renderTabs();
 }
+
+/* ---------------- navigation ---------------- */
+// Five dock groups. A group with sub-pages shows a segmented switch; "today" stacks its pages.
+const GROUPS = {
+  today: { pages: [["today", "วันนี้"], ["check", "Check-in"]], stack: true },
+  train: { pages: [["train", "โปรแกรม"], ["cal", "ปฏิทิน"], ["rules", "กติกา"]] },
+  food: { pages: [["food", "อาหาร"]] },
+  body: { pages: [["body", "น้ำหนัก"], ["goals", "เป้าหมาย"]] },
+  data: { pages: [["data", "สำรองข้อมูล"]] },
+};
+const GROUP_OF = Object.fromEntries(Object.entries(GROUPS).flatMap(([g, v]) => v.pages.map(([p]) => [p, g])));
+const lastSub = {};
+const RENDER = { today: renderToday, train: renderTrain, cal: renderCal, goals: renderGoals, food: renderFood, body: renderBody, check: renderCheck, data: renderData, rules: () => {} };
+
 function renderTabs() {
-  document.querySelectorAll("[data-tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === state.tab));
-  document.querySelectorAll("[data-page]").forEach((p) => (p.hidden = p.dataset.page !== state.tab));
-  ({ train: renderTrain, cal: renderCal, goals: renderGoals, food: renderFood, body: renderBody, check: renderCheck, data: renderData, rules: () => {} })[state.tab]();
+  const g = GROUP_OF[state.tab], grp = GROUPS[g];
+  lastSub[g] = state.tab;
+  const shown = grp.stack ? grp.pages.map(([p]) => p) : [state.tab];
+  document.querySelectorAll(".dock [data-group]").forEach((b) => b.setAttribute("aria-selected", b.dataset.group === g));
+  const seg = $("seg");
+  seg.hidden = grp.stack || grp.pages.length < 2;
+  seg.innerHTML = seg.hidden ? "" : grp.pages.map(([p, n]) => `<button data-tab="${p}" aria-pressed="${p === state.tab}">${n}</button>`).join("");
+  document.querySelectorAll("[data-page]").forEach((p) => (p.hidden = !shown.includes(p.dataset.page)));
+  shown.forEach((p) => RENDER[p]());
+  renderTag();
+}
+
+/* ---------------- price tag: today's headline numbers ---------------- */
+function renderTag() {
+  const tg = targetsNow(), tot = L.dayTotals(state.food[today()] || []);
+  const tr = L.bodyTrend(state.body, today());
+  const left = tg ? tg.kcal - tot.kcal : null;
+  $("tagLabel").textContent = tg ? (left >= 0 ? "kcal ที่เหลือวันนี้" : "kcal เกินเป้าวันนี้") : "kcal วันนี้";
+  $("tagBig").textContent = (tg ? Math.abs(left) : tot.kcal).toLocaleString("en-US");
+  $("tagP").innerHTML = `โปรตีน <b class="mono">${Math.round(tot.p)}</b>${tg ? `/${tg.p}` : ""} g`;
+  $("tagKg").innerHTML = tr.cur != null ? `7 วัน <b class="mono">${tr.cur.toFixed(1)}</b> kg` : "ยังไม่มีน้ำหนัก 7 วัน";
+}
+
+/* ---------------- today: the day as one receipt ---------------- */
+function renderToday() {
+  const t = today(), dow = new Date().getDay();
+  const day = DAYS.find((d) => d.dow === dow);
+  const lifts = day ? dayEx(day).filter((e) => e.log !== false && !e.cardio) : [];
+  const logged = lifts.filter((e) => todayEntry(e.id)).length;
+  const food = state.food[t] || [], tot = L.dayTotals(food), tg = targetsNow();
+  const bw = state.body.find((e) => e.d === t), ci = state.checkins[t];
+  const cmin = cardioMin(t);
+  const line = (ok, n, v, go) => `<button class="rline ${ok ? "done" : "pend"}" data-tab="${go}"><span class="rn">${n}</span><span class="rv mono">${v}</span></button>`;
+  const lines = [
+    line(!!bw, "ชั่งน้ำหนักเช้านี้", bw ? `${bw.kg.toFixed(1)} kg` : "ยังไม่ชั่ง", "body"),
+    line(!!ci, "Check-in ตอนเช้า", ci ? (L.redDay(ci) ? "เตือน 2 ข้อ+" : "บันทึกแล้ว") : "ยังไม่ทำ", "check"),
+    day && day.ex.length ? line(lifts.length && logged === lifts.length, `ซ้อม · ${esc(day.title)}`, `${logged}/${lifts.length} ท่า`, "train") : line(true, "วันพัก", "ไม่มีเวท", "train"),
+    line(cmin > 0, "คาร์ดิโอ", `${cmin} นาที`, "train"),
+    line(food.length > 0, `อาหาร ${food.length} รายการ`, `${tot.kcal.toLocaleString("en-US")} kcal`, "food"),
+  ];
+  $("p-today").innerHTML = `
+    <article class="receipt">
+      <header class="r-head"><b>GODSKIN</b><span>${esc(phase().name)}</span><span class="mono">${t.split("-").reverse().join("/")} · ${nowHM()}</span></header>
+      <div class="r-cut"></div>
+      ${lines.join("")}
+      <div class="r-cut"></div>
+      <div class="r-tot"><span>กินแล้ว</span><span class="mono">${tot.kcal.toLocaleString("en-US")}${tg ? ` / ${tg.kcal.toLocaleString("en-US")}` : ""} kcal</span></div>
+      <div class="r-tot"><span>โปรตีน · คาร์บ · ไขมัน</span><span class="mono">${Math.round(tot.p)} · ${Math.round(tot.c)} · ${Math.round(tot.f)} g</span></div>
+      <div class="r-tot"><span>คาร์ดิโอสัปดาห์นี้</span><span class="mono">${weekCardio()} / ${CARDIO_GOAL} นาที</span></div>
+      ${cutOne() ? `<p class="r-warn">ฟื้นตัวไม่ทัน 3 วันติด: วันนี้ตัดเซ็ตทุกท่าลง 1 และเพิ่มอาหาร ~300 kcal</p>` : ""}
+    </article>
+    ${day && day.ex.length ? `<button class="cta" data-tab="train"><span>ไปซ้อม · ${esc(day.title)}</span><span class="mono">${logged}/${lifts.length}</span></button>` : ""}`;
 }
 
 /* ---------------- week strip ---------------- */
@@ -254,7 +322,7 @@ function sparkline(history) {
 function renderDay() {
   const d = DAYS[state.dayIdx], p = phase(), cut = cutOne(), v = $("dayView");
   const mins = L.minutes(d, p, cut);
-  let html = `<div class="dayhead"><div><div class="label">${d.th} · ${esc(p.name)}</div><h2>${esc(d.title)}</h2><div class="sub">${esc(d.sub)}</div></div>` +
+  let html = `<div class="dayhead"><div><h2>${esc(d.title)}</h2><div class="sub">${d.th} · ${esc(d.sub)}</div></div>` +
     (mins ? `<span class="chip${mins > 90 ? " over" : ""}">≈ ${mins} นาที รวมวอร์ม</span>` : "") + `</div>`;
   if (!d.ex.length) {
     v.innerHTML = html + `<div class="ex"><p>${esc(d.rest)}</p></div>` + cardioCard();
@@ -646,6 +714,7 @@ function targetsNow() {
 }
 
 function renderFood() {
+  queueMicrotask(renderTag);
   const d = today(), s = state.settings;
   const { kg, src } = currentKg();
   const cm = s.height || 183;
@@ -692,43 +761,6 @@ function renderFood() {
   }));
 
   $("p-food").innerHTML = `
-    <h2>อาหาร</h2>
-    <div class="grid2">
-      <div class="card">
-        <h3>เป้าต่อวัน</h3>
-        <div class="field">
-          <label for="dob">วันเกิด</label><input type="date" id="dob" min="1940-01-01" max="${d}" value="${s.dob ?? ""}">
-          ${age ? `<span class="mono">อายุ ${age} ปี</span>` : ""}
-        </div>
-        <div class="field">
-          <label for="height">สูง</label><input type="number" id="height" min="140" max="220" inputmode="numeric" value="${cm}"><span>cm</span>
-        </div>
-        <div class="seg" role="group" aria-label="โหมด bulk">
-          ${Object.entries(L.BULK).map(([k, b]) => `<button id="bulk-${k}" data-bulk="${k}" aria-pressed="${b === mode}">${b.name} +${b.surplus}</button>`).join("")}
-        </div>
-        <span class="label" style="display:block;margin-top:10px">นอกเวลาซ้อม ขยับตัวแค่ไหน</span>
-        <div class="seg" role="group" aria-label="ระดับกิจกรรม">
-          ${Object.entries(L.ACTIVITY).map(([k, a]) => `<button data-act="${k}" aria-pressed="${a === act}">${a.name}</button>`).join("")}
-        </div>
-        <p class="note">${act.desc} · ไม่แน่ใจให้เลือกขยับน้อยไว้ก่อน แล้วดูน้ำหนักตัว 2 สัปดาห์</p>
-        <p class="note">${mode === L.BULK.size
-          ? `Size: น้ำหนักขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ ตัวใหญ่เร็วกว่า แต่ไขมันขึ้นด้วย แอปเฝ้าเอวและ check-in เรื่องเพศไว้ให้`
-          : `Lean: น้ำหนักขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ ไขมันขึ้นน้อย เหมาะกับช่วง Re-entry`}</p>
-        ${mode === L.BULK.size && week() <= 2 ? `<div class="banner"><b>ยังอยู่ช่วง Re-entry</b> ซ้อมเบาอยู่ ส่วนเกินที่มากขึ้นจะกลายเป็นไขมันมากกว่า แนะนำให้เริ่ม Size ตั้งแต่สัปดาห์ 3</div>` : ""}
-        ${mode === L.BULK.size && guard.length ? `<div class="banner bad"><b>ควรกลับไปโหมด Lean</b> ${guard.join(" · ")}</div>` : ""}
-        ${tg ? `<div class="big">${tg.kcal.toLocaleString()} kcal</div>
-          <p class="mono">โปรตีน ${tg.pMin}–${tg.p} g · คาร์บ ${tg.cMin}–${tg.c} g · ไขมัน ${tg.fMin}–${tg.f} g</p>
-          <p class="note">ใช้น้ำหนัก ${kg.toFixed(1)} kg (${src}) · ใช้พลังงานต่อวัน ~${tg.tdee.toLocaleString()} kcal + ส่วนเกิน ${mode.surplus} kcal สำหรับสร้างกล้าม</p>
-          ${trendTip ? `<p class="note">${trendTip}</p>` : ""}`
-        : `<p class="note">กรอกวันเกิดเพื่อคำนวณให้ตรงตัว ระหว่างนี้ใช้ช่วง 2,900–3,100 kcal</p>`}
-      </div>
-      <div class="card">
-        <h3>พร้อมซ้อมเมื่อไร</h3>
-        ${dayName?.ex.length ? `<p class="note">วันนี้: ${esc(dayName.title)}</p>` : ""}
-        ${ready}
-      </div>
-    </div>
-
     <div class="card">
       <h3>วันนี้กินไปแล้ว</h3>
       <div class="macros">
@@ -780,6 +812,42 @@ function renderFood() {
         ${state.myfoods.length ? `<div class="myfoods"><span class="label">อาหารของฉัน ${state.myfoods.length} รายการ</span>${state.myfoods.map((f) => `<div class="fitem"><span>${esc(f.n)} <span class="mono">${f.per} ${esc(f.unit)} · ${f.k} kcal · P${f.p}${f.na != null ? ` · Na ${f.na}` : ""}</span></span>
           <button class="x${myDelArm === f.id ? " armed" : ""}" data-mydel="${f.id}" aria-label="ลบ ${esc(f.n)}">${myDelArm === f.id ? "ลบ?" : "×"}</button></div>`).join("")}</div>` : ""}
       </details>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>เป้าต่อวัน</h3>
+        <div class="field">
+          <label for="dob">วันเกิด</label><input type="date" id="dob" min="1940-01-01" max="${d}" value="${s.dob ?? ""}">
+          ${age ? `<span class="mono">อายุ ${age} ปี</span>` : ""}
+        </div>
+        <div class="field">
+          <label for="height">สูง</label><input type="number" id="height" min="140" max="220" inputmode="numeric" value="${cm}"><span>cm</span>
+        </div>
+        <div class="seg" role="group" aria-label="โหมด bulk">
+          ${Object.entries(L.BULK).map(([k, b]) => `<button id="bulk-${k}" data-bulk="${k}" aria-pressed="${b === mode}">${b.name} +${b.surplus}</button>`).join("")}
+        </div>
+        <span class="label" style="display:block;margin-top:10px">นอกเวลาซ้อม ขยับตัวแค่ไหน</span>
+        <div class="seg" role="group" aria-label="ระดับกิจกรรม">
+          ${Object.entries(L.ACTIVITY).map(([k, a]) => `<button data-act="${k}" aria-pressed="${a === act}">${a.name}</button>`).join("")}
+        </div>
+        <p class="note">${act.desc} · ไม่แน่ใจให้เลือกขยับน้อยไว้ก่อน แล้วดูน้ำหนักตัว 2 สัปดาห์</p>
+        <p class="note">${mode === L.BULK.size
+          ? `Size: น้ำหนักขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ ตัวใหญ่เร็วกว่า แต่ไขมันขึ้นด้วย แอปเฝ้าเอวและ check-in เรื่องเพศไว้ให้`
+          : `Lean: น้ำหนักขึ้น ${mode.range[0]}–${mode.range[1]} kg/สัปดาห์ ไขมันขึ้นน้อย เหมาะกับช่วง Re-entry`}</p>
+        ${mode === L.BULK.size && week() <= 2 ? `<div class="banner"><b>ยังอยู่ช่วง Re-entry</b> ซ้อมเบาอยู่ ส่วนเกินที่มากขึ้นจะกลายเป็นไขมันมากกว่า แนะนำให้เริ่ม Size ตั้งแต่สัปดาห์ 3</div>` : ""}
+        ${mode === L.BULK.size && guard.length ? `<div class="banner bad"><b>ควรกลับไปโหมด Lean</b> ${guard.join(" · ")}</div>` : ""}
+        ${tg ? `<div class="big">${tg.kcal.toLocaleString()} kcal</div>
+          <p class="mono">โปรตีน ${tg.pMin}–${tg.p} g · คาร์บ ${tg.cMin}–${tg.c} g · ไขมัน ${tg.fMin}–${tg.f} g</p>
+          <p class="note">ใช้น้ำหนัก ${kg.toFixed(1)} kg (${src}) · ใช้พลังงานต่อวัน ~${tg.tdee.toLocaleString()} kcal + ส่วนเกิน ${mode.surplus} kcal สำหรับสร้างกล้าม</p>
+          ${trendTip ? `<p class="note">${trendTip}</p>` : ""}`
+        : `<p class="note">กรอกวันเกิดเพื่อคำนวณให้ตรงตัว ระหว่างนี้ใช้ช่วง 2,900–3,100 kcal</p>`}
+      </div>
+      <div class="card">
+        <h3>พร้อมซ้อมเมื่อไร</h3>
+        ${dayName?.ex.length ? `<p class="note">วันนี้: ${esc(dayName.title)}</p>` : ""}
+        ${ready}
+      </div>
     </div>
 
     <div class="grid2">
@@ -1342,6 +1410,7 @@ function wirePhotos() {
 
 /* ---------------- body weight ---------------- */
 function renderBody() {
+  queueMicrotask(renderTag);
   const t = today();
   const cur = state.body.find((e) => e.d === t);
   const mode = bulkMode();
@@ -1379,6 +1448,7 @@ function renderBody() {
 
 /* ---------------- check-in ---------------- */
 function renderCheck() {
+  queueMicrotask(() => { renderTag(); if (!$("p-today").hidden) renderToday(); });
   const t = today();
   const c = state.checkins[t] || {};
   const slept = [];

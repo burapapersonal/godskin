@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Godskin Program</title>
 <meta name="description" content="บันทึกการซ้อมสร้างกล้าม 6 วัน/สัปดาห์ พร้อม progressive overload อัตโนมัติ">
-<meta name="theme-color" content="#14181D">
+<meta name="theme-color" content="#FFD21F">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -14,41 +14,37 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Martian+Mono:wght@400;700;800&display=swap">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 
-<header class="top wrap">
-  <div>
-    <div class="label">Hypertrophy block · 8 สัปดาห์ · Double progression</div>
-    <h1>Godskin</h1>
+<header class="tagbar" id="tagbar">
+  <div class="wrap tag-in">
+    <div class="tag-main"><span class="tag-k" id="tagLabel">kcal ที่เหลือวันนี้</span><b class="tag-big" id="tagBig">–</b></div>
+    <div class="tag-side"><span id="today"></span><span id="tagP"></span><span id="tagKg"></span></div>
   </div>
-  <span class="chip" id="today"></span>
 </header>
 
-<div class="bar">
-  <div class="wrap">
+<nav class="dock" role="tablist" aria-label="หมวดหลัก">
+  <button role="tab" id="tab-today" data-tab="today" data-group="today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>วันนี้</button>
+  <button role="tab" id="tab-train" data-tab="train" data-group="train"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12"/></svg>ซ้อม</button>
+  <button role="tab" id="tab-food" data-tab="food" data-group="food"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1-3 4-3 7h3v11"/></svg>อาหาร</button>
+  <button role="tab" id="tab-body" data-tab="body" data-group="body"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>ร่างกาย</button>
+  <button role="tab" id="tab-data" data-tab="data" data-group="data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3"/></svg>ข้อมูล</button>
+</nav>
+
+<main class="wrap">
+  <div class="seg" id="seg" role="group" aria-label="หน้าย่อย" hidden></div>
+
+  <section id="p-today" class="page" data-page="today" hidden></section>
+
+  <section id="p-train" class="page" data-page="train" hidden>
     <div class="weekrow">
       <div class="weeks" id="weeks" role="group" aria-label="สัปดาห์ของบล็อก"></div>
       <div class="phase"><b id="phaseName"></b><span id="phaseDesc"></span></div>
     </div>
     <div class="weekask" id="weekAsk" hidden></div>
-    <nav class="tabs" role="tablist">
-      <button role="tab" id="tab-train" data-tab="train">ซ้อม</button>
-      <button role="tab" id="tab-cal" data-tab="cal">ปฏิทิน</button>
-      <button role="tab" id="tab-goals" data-tab="goals">เป้าหมาย</button>
-      <button role="tab" id="tab-food" data-tab="food">อาหาร</button>
-      <button role="tab" id="tab-body" data-tab="body">น้ำหนักตัว</button>
-      <button role="tab" id="tab-check" data-tab="check">Check-in</button>
-      <button role="tab" id="tab-rules" data-tab="rules">กติกา</button>
-      <button role="tab" id="tab-data" data-tab="data">สำรองข้อมูล</button>
-    </nav>
-  </div>
-</div>
-
-<main class="wrap">
-  <section id="p-train" data-page="train">
     <div id="banners"></div>
     <div class="days" id="days" role="group" aria-label="เลือกวัน"></div>
     <div id="dayView"></div>

@@ -1,3 +1,8 @@
 godskin-program.html
 *.json.bak
 node_modules/
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/config.local.json
+PRODUCT.md
+.impeccable/
