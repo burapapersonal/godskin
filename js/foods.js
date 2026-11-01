@@ -45,6 +45,9 @@ export const FOODS = [
     { id: "bread", g: "bread", vn: "ขาว", n: "ขนมปังขาว", a: "bread white", unit: "g", per: 100, def: 56, pc: ["แผ่น", 28], k: 265, p: 9, c: 49, f: 3.2 },
     // Whole-wheat sandwich loaf label: 2 slices (50 g) = 140 kcal, F2, P4, C25, fibre 2, Na210.
     { id: "bread_ww", g: "bread", vn: "โฮลวีท", n: "ขนมปังโฮลวีท (ฉลาก)", a: "bread whole wheat", unit: "g", per: 100, def: 50, pc: ["แผ่น", 25], k: 280, p: 8, c: 50, f: 4, na: 420 },
+    // Yamazaki buns, no label: estimated from typical size (raisin roll ~90 g, edamame-cheese ~100 g).
+    { id: "yz_raisin", n: "Yamazaki เรซิ่นโรล (ประมาณ)", a: "yamazaki raisin roll ยามาซากิ ลูกเกด ขนมปัง", unit: "g", per: 100, def: 90, pc: ["ชิ้น", 90], k: 322, p: 7.8, c: 55.6, f: 7.8 },
+    { id: "yz_edamame_cheese", n: "Yamazaki ชีสถั่วแระ (ประมาณ)", a: "yamazaki edamame cheese ยามาซากิ ถั่วแระ ชีส ขนมปัง", unit: "g", per: 100, def: 100, pc: ["ชิ้น", 100], k: 310, p: 10, c: 38, f: 13 },
     // Mission label (Thai import, 360 g pack of 6): per 100 g 300 kcal, P8 C50 F7, sodium 940 mg.
     { id: "mission_wrap", n: "แป้งแรป Mission Original", a: "wrap tortilla", unit: "g", per: 100, def: 120, pc: ["แผ่น", 60], k: 300, p: 8, c: 50, f: 7, na: 940 },
     { id: "noodle_small", g: "noodle", vn: "เส้นเล็ก", n: "เส้นเล็ก/เส้นใหญ่ (ลวก)", a: "rice noodle", unit: "g", per: 100, def: 150, k: 109, p: 1.8, c: 25, f: 0.2 },
