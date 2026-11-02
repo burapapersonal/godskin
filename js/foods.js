@@ -113,6 +113,7 @@ export const FOODS = [
     { id: "squid", g: "sea", vn: "ปลาหมึก", n: "ปลาหมึก (ดิบ)", a: "squid", unit: "g", per: 100, def: 150, k: 92, p: 15.6, c: 3.1, f: 1.4, na: 44 },
     { id: "salmon", g: "sea", vn: "แซลมอน", n: "แซลมอน (ดิบ)", a: "salmon", unit: "g", per: 100, def: 150, k: 208, p: 20, c: 0, f: 13, na: 59 },
     { id: "tilapia", g: "sea", vn: "ปลานิล", n: "ปลานิล/ปลาเนื้อขาว (ดิบ)", a: "tilapia fish", unit: "g", per: 100, def: 150, k: 96, p: 20, c: 0, f: 1.7, na: 52 },
+    { id: "catfish", g: "sea", vn: "ปลาดุก", n: "ปลาดุก (ดิบ, เนื้อล้วน)", a: "catfish pla duk ปลาดุก", unit: "g", per: 100, def: 150, k: 110, p: 16.5, c: 0, f: 4.8, na: 60 },
     { id: "pla_too", g: "sea", vn: "ปลาทู", n: "ปลาทูนึ่ง (เนื้อ)", a: "mackerel", unit: "g", per: 100, def: 60, pc: ["ตัว", 60], k: 160, p: 21, c: 0, f: 8, na: 600 },
     { id: "tuna_can", g: "sea", vn: "ทูน่ากระป๋อง", n: "ทูน่ากระป๋องในน้ำแร่ (สะเด็ดน้ำ)", a: "tuna can", unit: "g", per: 100, def: 120, pc: ["กระป๋อง", 120], k: 116, p: 25.5, c: 0, f: 0.8, na: 340 },
     { id: "meatball", g: "proc", vn: "ลูกชิ้น", n: "ลูกชิ้นหมู/ไก่ (ประมาณ)", a: "meatball", unit: "g", per: 100, def: 100, pc: ["ลูก", 10], k: 150, p: 11, c: 10, f: 8, na: 900 },
@@ -144,6 +145,7 @@ export const FOODS = [
     { id: "chicken_rice", g: "kmk", vn: "ไก่ต้ม", n: "ข้าวมันไก่", a: "chicken rice", unit: "g", per: 100, def: 350, pc: ["จาน", 350], k: 171, p: 8, c: 21.4, f: 6 },
     { id: "kmk_tod", g: "kmk", vn: "ไก่ทอด", n: "ข้าวมันไก่ทอด", a: "fried chicken rice", unit: "g", per: 100, def: 300, pc: ["จาน", 300], k: 230, p: 9, c: 24, f: 11 },
     { id: "fried_rice", n: "ข้าวผัดหมู/ไก่", a: "fried rice", unit: "g", per: 100, def: 350, pc: ["จาน", 350], k: 166, p: 6, c: 22, f: 6, na: 400 },
+    { id: "catfish_teriyaki", n: "ปลาดุกเทอริยากิ (สุก, ไม่รวมข้าว, ประมาณ)", a: "catfish teriyaki ปลาดุก เทอริยากิ", unit: "g", per: 100, def: 150, pc: ["ชิ้น", 75], k: 195, p: 17, c: 9, f: 10, na: 620 },
     { id: "kai_jiao_rice", n: "ข้าวไข่เจียว (2 ฟอง)", a: "omelette rice", unit: "g", per: 100, def: 350, pc: ["จาน", 350], k: 185, p: 6.5, c: 17, f: 10 },
     { id: "khao_kha_moo", n: "ข้าวขาหมู", a: "pork leg rice", unit: "g", per: 100, def: 350, pc: ["จาน", 350], k: 197, p: 8.5, c: 20, f: 9, na: 450 },
     { id: "khao_moo_daeng", n: "ข้าวหมูแดง", a: "red pork rice", unit: "g", per: 100, def: 320, pc: ["จาน", 320], k: 169, p: 8, c: 22, f: 5.5, na: 400 },
@@ -418,6 +420,7 @@ export const FOODS = [
     { id: "heinz_mayo_lf", n: "มายองเนส ไฮนซ์ โลว์แฟต (ประมาณ)", a: "mayo mayonnaise heinz", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 15], k: 300, p: 0.8, c: 8, f: 29, na: 800 },
     // Takumi shoyu: estimate from typical Japanese-style soy sauce, check the bottle.
     { id: "takumi_shoyu", g: "sauce", vn: "โชยุ", n: "ทาคูมิ โชยุ (ประมาณ)", a: "soy sauce shoyu", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 16], k: 60, p: 6, c: 8, f: 0, na: 5700 },
+    { id: "teriyaki_sauce", g: "sauce", vn: "เทอริยากิ", n: "ซอสเทอริยากิ (ขวด, ประมาณ)", a: "teriyaki sauce ซอส", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 18], k: 110, p: 3, c: 22, f: 0, na: 3500 },
     { id: "fish_sauce", g: "sauce", vn: "น้ำปลา", n: "น้ำปลา", a: "fish sauce", unit: "g", per: 100, def: 18, pc: ["ช้อนโต๊ะ", 18], k: 35, p: 5, c: 3.6, f: 0, na: 7700 },
     { id: "oyster_sauce", g: "sauce", vn: "ซอสหอยนางรม", n: "ซอสหอยนางรม", a: "oyster sauce", unit: "g", per: 100, def: 18, pc: ["ช้อนโต๊ะ", 18], k: 51, p: 1.4, c: 11, f: 0.3, na: 2700 },
     { id: "ketchup", g: "sauce", vn: "ซอสมะเขือเทศ", n: "ซอสมะเขือเทศ", a: "ketchup", unit: "g", per: 100, def: 17, pc: ["ช้อนโต๊ะ", 17], k: 112, p: 1.2, c: 26, f: 0.1, na: 900 },
