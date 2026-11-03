@@ -388,6 +388,9 @@ export const FOODS = [
   ...cat("snack", [
     // Lotus Biscoff 124 g bag (label): 600 kcal, F24, sugar 44, Na500; carb/protein from Lotus spec (72.6/4.9 per 100 g).
     { id: "biscoff", n: "Lotus Biscoff บิสกิต (ฉลาก)", a: "lotus biscoff cookie biscuit คุกกี้", unit: "g", per: 100, def: 15.5, pc: ["ซองเล็ก (2 ชิ้น)", 15.5], k: 484, p: 4.9, c: 72.6, f: 19.4, na: 403 },
+    // Tokyo Sweets crepe mochi, no label: crepe + mochi + cream, ~65 g each (estimate).
+    { id: "ts_crepe_mochi_choc", g: "crepe_mochi", vn: "ช็อกโกแลต", n: "Tokyo Sweets เครปโมจิ ช็อกโกแลต (ประมาณ)", a: "tokyo sweets crepe mochi chocolate เครป โมจิ ช็อก", unit: "g", per: 100, def: 65, pc: ["ชิ้น", 65], k: 300, p: 4.5, c: 40, f: 13.5, na: 90 },
+    { id: "ts_crepe_mochi_matcha", g: "crepe_mochi", vn: "มัทฉะ", n: "Tokyo Sweets เครปโมจิ มัทฉะ (ประมาณ)", a: "tokyo sweets crepe mochi matcha green tea เครป โมจิ ชาเขียว", unit: "g", per: 100, def: 65, pc: ["ชิ้น", 65], k: 290, p: 4.5, c: 39, f: 12.5, na: 80 },
     // Skippy Super Chunk label: 1 tbsp (15 g) = 100 kcal, F8, P3, C4, Na70.
     { id: "skippy", n: "เนยถั่ว Skippy ซุปเปอร์ชังค์ (ฉลาก)", a: "peanut butter", unit: "g", per: 100, def: 15, pc: ["ช้อนโต๊ะ", 15], k: 667, p: 20, c: 26.7, f: 53.3, na: 467 },
     { id: "almonds", g: "nuts", vn: "อัลมอนด์", n: "อัลมอนด์", a: "almond nuts", unit: "g", per: 100, def: 28, pc: ["กำมือ", 28], k: 579, p: 21, c: 22, f: 50 },
