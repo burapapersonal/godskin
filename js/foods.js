@@ -219,6 +219,9 @@ export const FOODS = [
   // Fast-food chains: values from the chains' published nutrition (mostly global menus); Thai
   // menus and portions differ a little, so these are labelled as estimates.
   ...cat("fast", [
+    // Banh Mi Nem (Grab), no label: baguette ~85 g + roast chicken ~80 g + pate/mayo/butter + pickles; peng ji roll ~60 g each.
+    { id: "bm_roast_chicken", g: "banhmi", vn: "ไก่ย่าง", n: "บั๋นหมี่ไก่ย่าง (ประมาณ)", a: "banh mi bahn mi roasted chicken บั๋นหมี่ บานหมี่ ไก่ย่าง nem", unit: "g", per: 100, def: 220, pc: ["ชิ้น", 220], k: 227, p: 13.6, c: 26.4, f: 7.3, na: 450 },
+    { id: "bm_pengji_liver", g: "banhmi", vn: "แป้งจี่ตับหมู", n: "แป้งจี่ตับหมูบด (ประมาณ)", a: "banh mi peng ji pork liver pate แป้งจี่ ปาเต้ ตับหมู nem", unit: "g", per: 100, def: 120, pc: ["ชิ้น", 60], k: 300, p: 10, c: 37.5, f: 12.5, na: 500 },
     { id: "mcd_bigmac", g: "mcd_burger", vn: "Big Mac", n: "แมคโดนัลด์ บิ๊กแมค (ประมาณ)", a: "mcdonald mcdonalds big mac burger แมค", unit: "g", per: 100, def: 219, pc: ["ชิ้น", 219], k: 251, p: 11.4, c: 20.5, f: 13.7, na: 461 },
     { id: "mcd_cheese", g: "mcd_burger", vn: "ชีสเบอร์เกอร์", n: "แมคโดนัลด์ ชีสเบอร์เกอร์ (ประมาณ)", a: "mcdonald mcdonalds cheeseburger แมค", unit: "g", per: 100, def: 114, pc: ["ชิ้น", 114], k: 263, p: 13.2, c: 28.9, f: 11.4, na: 632 },
     { id: "mcd_dbl_cheese", g: "mcd_burger", vn: "ดับเบิลชีส", n: "แมคโดนัลด์ ดับเบิลชีสเบอร์เกอร์ (ประมาณ)", a: "mcdonald mcdonalds double cheeseburger แมค", unit: "g", per: 100, def: 165, pc: ["ชิ้น", 165], k: 273, p: 15.2, c: 20.6, f: 14.5, na: 667 },
