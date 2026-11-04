@@ -242,6 +242,8 @@ function renderDays() {
 }
 
 function hist(id) { return state.logs[id]?.history || []; }
+// "5/7.5×12": a superset keeps the second movement's load in w2.
+const setsText = (e, sep) => e.w.map((w, k) => w + (e.w2?.[k] != null ? "/" + e.w2[k] : "") + "×" + e.r[k]).join(sep);
 const isDone = (id, d = today()) => (state.done[d] || []).includes(id);
 
 // Per-exercise feedback. "pain" and "tooHeavy" hold the next suggestion at the same load.
@@ -373,13 +375,17 @@ function renderDay() {
         `<a class="yt" href="https://www.youtube.com/results?search_query=${encodeURIComponent(ytQuery(ex.n))}" target="_blank" rel="noopener">ดูคลิปจริงบน YouTube ↗</a></details>` : "");
     if (ex.log !== false) {
       html += `<div class="sugg"><span class="tag ${sg.kind}">${esc(sg.tag)}</span><span>${esc(sg.text)}</span>` +
-        (last ? `<span class="last mono">ครั้งก่อน ${fmtDate(last.d)}: ${last.w.map((w, k) => w + "×" + last.r[k]).join(", ")}</span>` : "") +
+        (last ? `<span class="last mono">ครั้งก่อน ${fmtDate(last.d)}: ${setsText(last, ", ")}</span>` : "") +
         (prevNote ? `<span class="last">โน้ต ${fmtDate(prevNote.d)}: ${esc(noteText(prevNote))}</span>` : "") + `</div>`;
-      html += `<div class="sets">`;
+      const first = ex.pair && ex.n.replace(/^Superset:\s*/, "").split(" + ")[0];
+      const pw = ex.pair && pairWeight(ex, last, sg);
+      html += `<div class="sets${ex.pair ? " paired" : ""}">` +
+        (ex.pair ? `<div class="set-h"><span></span><span>${esc(first)} kg</span><span>${esc(ex.pair)} kg</span><span>ครั้ง</span></div>` : "");
       for (let s = 0; s < n; s++) {
         const wv = cur?.w[s] ?? "", rv = cur?.r[s] ?? "";
         html += `<div class="set"><label for="w_${ex.id}_${s}">S${s + 1}</label>
-          <input id="w_${ex.id}_${s}" data-ex="${ex.id}" inputmode="decimal" placeholder="${sg.weight ?? "kg"}" value="${wv}" aria-label="น้ำหนักเซ็ต ${s + 1} (kg)">
+          <input id="w_${ex.id}_${s}" data-ex="${ex.id}" inputmode="decimal" placeholder="${sg.weight ?? "kg"}" value="${wv}" aria-label="น้ำหนัก ${esc(first || "")} เซ็ต ${s + 1} (kg)">` +
+          (ex.pair ? `<input id="w2_${ex.id}_${s}" data-ex="${ex.id}" inputmode="decimal" placeholder="${pw ?? "kg"}" value="${cur?.w2?.[s] ?? ""}" aria-label="น้ำหนัก ${esc(ex.pair)} เซ็ต ${s + 1} (kg)">` : "") + `
           <input id="r_${ex.id}_${s}" data-ex="${ex.id}" data-rep="${s}" inputmode="numeric" placeholder="ครั้ง" value="${rv}" aria-label="จำนวนครั้งเซ็ต ${s + 1}"></div>`;
       }
       html += `</div><div class="row-actions">` +
@@ -392,7 +398,7 @@ function renderDay() {
       </details>`;
       if (h.length > 1) {
         html += `<details class="hist"><summary>ประวัติ ${h.length} ครั้ง</summary>${sparkline(h)}<table>` +
-          h.slice().reverse().slice(0, 12).map((e) => `<tr><td>${fmtDate(e.d)}</td><td>W${e.wk ?? "-"}</td><td>${e.w.map((w, k) => w + "×" + e.r[k]).join("  ")}</td></tr>`).join("") +
+          h.slice().reverse().slice(0, 12).map((e) => `<tr><td>${fmtDate(e.d)}</td><td>W${e.wk ?? "-"}</td><td>${setsText(e, "  ")}</td></tr>`).join("") +
           `</table></details>`;
       }
     }
@@ -552,6 +558,12 @@ const shownEx = {};
 const exById = (id) => shownEx[id] || DAYS.flatMap((d) => d.ex).find((e) => e.id === id);
 
 const timers = {};
+// Second movement of a superset: same load as last time, one step up when the pair hit the rep ceiling.
+function pairWeight(ex, last, sg) {
+  const prev = last?.w2?.length ? Math.max(...last.w2) : null;
+  if (prev == null) return null;
+  return sg.kind === "up" ? Math.round((prev + (ex.pinc || 0)) * 100) / 100 : prev;
+}
 function scheduleSave(id) {
   clearTimeout(timers[id]);
   timers[id] = setTimeout(() => saveExercise(id), 400);
@@ -560,15 +572,19 @@ async function saveExercise(id) {
   const ex = exById(id), p = phase();
   const n = L.setsFor(ex, p, cutOne());
   const sg = L.suggest(ex, p, hist(id), today());
-  const w = [], r = [];
+  const w = [], r = [], w2 = [];
+  const pw = ex.pair && pairWeight(ex, hist(id).filter((h) => h.d < today()).at(-1), sg);
   let bad = false;
   for (let s = 0; s < n; s++) {
     const wv = $(`w_${id}_${s}`).value.trim().replace(",", ".");
     const rv = $(`r_${id}_${s}`).value.trim();
     if (rv === "") continue;
     const wn = wv === "" ? (sg.weight ?? 0) : Number(wv);
-    if (isNaN(wn) || isNaN(Number(rv))) { bad = true; continue; }
+    const pv = ex.pair ? $(`w2_${id}_${s}`).value.trim().replace(",", ".") : "";
+    const pn = pv === "" ? (pw ?? 0) : Number(pv);
+    if (isNaN(wn) || isNaN(pn) || isNaN(Number(rv))) { bad = true; continue; }
     w.push(wn); r.push(Number(rv));
+    if (ex.pair) w2.push(pn);
   }
   // The block starts the week training really starts, however long the app sat unused before.
   if (state.settings.startAuto && r.length) {
@@ -580,7 +596,7 @@ async function saveExercise(id) {
   }
   const rec = state.logs[id] || { history: [] };
   rec.history = rec.history.filter((h) => h.d !== today());
-  if (r.length) rec.history.push({ d: today(), w, r, wk: week() });
+  if (r.length) rec.history.push({ d: today(), w, r, wk: week(), ...(w2.some((x) => x > 0) ? { w2 } : {}) });
   rec.history.sort((a, b) => (a.d < b.d ? -1 : 1));
   rec.history = rec.history.slice(-120);
   if (rec.history.length) state.logs[id] = rec; else delete state.logs[id];
@@ -1090,7 +1106,7 @@ function renderCal() {
   const detail = `<div class="card cal-detail" id="calDetail">
     <h3>${dt.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long" })}</h3>
     <p class="label">${esc(x.plan.title)}${sel > t ? " · ยังไม่ถึง" : ""}</p>
-    ${x.lifts.length ? `<div class="cal-sec"><b>ซ้อม ${Math.round(x.ratio * 100)}%</b>${x.lifts.map((h) => `<div class="fitem"><span>${esc(exName(h.id))}</span><span class="mono">${h.w.map((w, k) => w + "×" + h.r[k]).join(" ")}</span></div>`).join("")}</div>` : sel <= t && x.plan.ex.length ? `<p class="note">ไม่ได้บันทึกการซ้อม</p>` : ""}
+    ${x.lifts.length ? `<div class="cal-sec"><b>ซ้อม ${Math.round(x.ratio * 100)}%</b>${x.lifts.map((h) => `<div class="fitem"><span>${esc(exName(h.id))}</span><span class="mono">${setsText(h, " ")}</span></div>`).join("")}</div>` : sel <= t && x.plan.ex.length ? `<p class="note">ไม่ได้บันทึกการซ้อม</p>` : ""}
     ${x.cardio ? `<div class="cal-sec"><b>คาร์ดิโอ</b> ${x.cardio} นาที</div>` : ""}
     ${x.notes.length ? `<div class="cal-sec"><b>โน้ต</b>${x.notes.map((n) => `<div class="fitem"><span>${esc(exName(n.id))}</span><span class="${n.tags?.includes("pain") ? "err" : "note"}">${esc(noteText(n))}</span></div>`).join("")}</div>` : ""}
     ${x.tot ? `<div class="cal-sec"><b>อาหาร ${x.foodOk ? "ครบ" : "ยังไม่ถึงเป้า"}</b><p class="mono">${x.tot.kcal.toLocaleString()}${tg ? ` / ${tg.kcal.toLocaleString()}` : ""} kcal · P${Math.round(x.tot.p)}${tg ? `/${tg.pMin}` : ""} · C${Math.round(x.tot.c)} · F${Math.round(x.tot.f)}${tg ? `/${tg.fMin}` : ""}</p></div>` : ""}

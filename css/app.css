@@ -140,6 +140,10 @@ a{color:inherit;text-underline-offset:3px}
 .set input{width:68px;min-height:44px;padding:8px 6px;border:0;border-bottom:2px solid var(--ink);background:var(--sunk);color:var(--ink);font:inherit;font-size:17px;text-align:center}
 .set input:focus{background:var(--tag);color:var(--tag-ink);outline:none}
 .set input::placeholder{color:var(--muted);opacity:.7}
+.sets.paired{grid-template-columns:1fr;gap:6px}
+.set-h{display:flex;gap:6px;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.set-h span{width:68px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.set-h span:first-child{width:22px}
 .row-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .btn{font-weight:700;font-size:15px;min-height:44px;padding:8px 16px;border:2px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
 .btn:active{transform:translateY(1px)}

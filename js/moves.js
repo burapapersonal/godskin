@@ -192,6 +192,10 @@ export const MOVES = {
     front: true, base: { torso: 90, hand: [0, -52], handL: [0, -46], grip: "db1" },
     A: { hipY: 93 }, B: { hipY: 91 },
   },
+  shrug: {
+    front: true, base: { torso: 90, hand: [0, -52], grip: "db" },
+    A: { shrug: 0 }, B: { shrug: 7 },
+  },
   chop_high: {
     front: true, base: { eb: 1 },
     A: { torso: 98, handAbs: [182, 172] }, B: { torso: 84, handAbs: [80, 70] },
@@ -234,6 +238,7 @@ export const MOVE_OF = {
   cable_chop: ["chop_high", "handle"], chop_lh: ["chop_low", "handle"],
   pallof: ["pallof", "handle"], pallof_kneel: ["pallof", "handle"],
   suitcase_hold: ["hold"], side_bend: ["side_bend"],
+  db_shrug: ["shrug", "db"], smith_shrug: ["shrug", "bar"], cable_shrug: ["shrug", "bar"],
 };
 
 const lerp = (a, b, t) => (Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * t) : a + (b - a) * t);
@@ -261,7 +266,7 @@ export function frame(m, t, grip) {
     const head = at(sh, L.neck, p.torso);
     dots.push([head[0], head[1], L.head, "h"]);
     for (const side of [1, -1]) {
-      const s = [sh[0] + side * 20 * nx, sh[1] + side * 20 * ny];
+      const s = [sh[0] + side * 20 * nx, sh[1] + side * 20 * ny + (p.shrug || 0)];
       const hp = [hip[0] + side * 9, hip[1]];
       seg([sh[0], sh[1]], s); seg([hip[0], hip[1]], hp);
       const [knee, ankle] = ik(hp, [hip[0] + side * 13, 10], L.thigh, L.shin, side);
