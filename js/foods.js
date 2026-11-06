@@ -55,6 +55,7 @@ export const FOODS = [
     { id: "glass_noodle", g: "noodle", vn: "วุ้นเส้น", n: "วุ้นเส้น (ลวก)", a: "glass noodle", unit: "g", per: 100, def: 100, k: 85, p: 0.1, c: 21, f: 0 },
     { id: "khanom_jeen", g: "noodle", vn: "ขนมจีน", n: "เส้นขนมจีน", a: "khanom jeen", unit: "g", per: 100, def: 150, k: 110, p: 1.8, c: 25, f: 0.1 },
     { id: "pasta", g: "noodle", vn: "พาสต้า", n: "พาสต้า/สปาเกตตี (สุก)", a: "pasta spaghetti", unit: "g", per: 100, def: 200, k: 158, p: 5.8, c: 31, f: 0.9 },
+    { id: "pasta_dry", g: "noodle", vn: "พาสต้า (ดิบ)", n: "พาสต้า/สปาเกตตี (เส้นดิบ ชั่งก่อนต้ม)", a: "pasta spaghetti dry raw", unit: "g", per: 100, def: 100, k: 371, p: 13, c: 75, f: 1.5 },
     { id: "sweet_potato", g: "tuber", vn: "มันหวาน", n: "มันหวาน (ต้ม)", a: "sweet potato", unit: "g", per: 100, def: 150, k: 86, p: 1.6, c: 20, f: 0.1 },
     { id: "potato", g: "tuber", vn: "มันฝรั่ง", n: "มันฝรั่ง (ต้ม/อบ)", a: "potato", unit: "g", per: 100, def: 150, pc: ["หัว", 150], k: 87, p: 1.9, c: 20, f: 0.1 },
     { id: "corn", g: "tuber", vn: "ข้าวโพด", n: "ข้าวโพดหวาน (ต้ม)", a: "corn", unit: "g", per: 100, def: 100, pc: ["ฝัก", 100], k: 96, p: 3.4, c: 21, f: 1.5 },
