@@ -431,6 +431,8 @@ export const FOODS = [
     { id: "dark_choc", n: "ดาร์กช็อกโกแลต 70%", a: "dark chocolate", unit: "g", per: 100, def: 20, pc: ["แถว", 10], k: 600, p: 7.8, c: 46, f: 43 },
     { id: "protein_bar", n: "โปรตีนบาร์ (ประมาณ)", a: "protein bar", unit: "g", per: 100, def: 60, pc: ["แท่ง", 60], k: 360, p: 33, c: 35, f: 12 },
     { id: "chips", n: "มันฝรั่งทอดกรอบ", a: "potato chips crisps lays", unit: "g", per: 100, def: 50, pc: ["ซอง", 50], k: 536, p: 7, c: 53, f: 35, na: 525 },
+    // Lay's Mieng Kam label, per bag: 320 kcal, sugar 1, F18, Na270. P/C not on the front label: worked from the remaining kcal.
+    { id: "lays_miengkam", n: "เลย์ รสเมี่ยงคำครบรส (ฉลาก, ต่อซอง)", a: "lays chips มันฝรั่งทอด เมี่ยงคำ", unit: "ซอง", per: 1, def: 1, k: 320, p: 4, c: 35, f: 18, na: 270 },
     // Calbee Bun Bun label per 31 g: 150 kcal, P5 C17 F7, sodium 160 mg; a bag is about 3 servings.
     { id: "bunbun", n: "คาลบี้ บันบัน", a: "calbee", unit: "g", per: 100, def: 31, pc: ["ซอง", 93], k: 484, p: 16.1, c: 54.8, f: 22.6, na: 516 },
   ]),
