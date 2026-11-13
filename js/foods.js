@@ -56,6 +56,8 @@ export const FOODS = [
     { id: "khanom_jeen", g: "noodle", vn: "ขนมจีน", n: "เส้นขนมจีน", a: "khanom jeen", unit: "g", per: 100, def: 150, k: 110, p: 1.8, c: 25, f: 0.1 },
     { id: "pasta", g: "noodle", vn: "พาสต้า", n: "พาสต้า/สปาเกตตี (สุก)", a: "pasta spaghetti", unit: "g", per: 100, def: 200, k: 158, p: 5.8, c: 31, f: 0.9 },
     { id: "pasta_dry", g: "noodle", vn: "พาสต้า (ดิบ)", n: "พาสต้า/สปาเกตตี (เส้นดิบ ชั่งก่อนต้ม)", a: "pasta spaghetti dry raw", unit: "g", per: 100, def: 100, k: 371, p: 13, c: 75, f: 1.5 },
+    // Ichigo fresh ramen noodle, 180 g pack: flour 70%, water 29.5%, salt 0.5%; no label, worked from the recipe.
+    { id: "ichigo_ramen", g: "noodle", vn: "ราเมนสด Ichigo", n: "เส้นราเมนสด Ichigo (ดิบ ก่อนต้ม, ประมาณ)", a: "ramen fresh noodle ichigo ichiban เส้นราเมน", unit: "g", per: 100, def: 90, pc: ["ห่อ", 180], k: 255, p: 7.2, c: 53.4, f: 0.7, na: 200 },
     { id: "sweet_potato", g: "tuber", vn: "มันหวาน", n: "มันหวาน (ต้ม)", a: "sweet potato", unit: "g", per: 100, def: 150, k: 86, p: 1.6, c: 20, f: 0.1 },
     { id: "potato", g: "tuber", vn: "มันฝรั่ง", n: "มันฝรั่ง (ต้ม/อบ)", a: "potato", unit: "g", per: 100, def: 150, pc: ["หัว", 150], k: 87, p: 1.9, c: 20, f: 0.1 },
     { id: "corn", g: "tuber", vn: "ข้าวโพด", n: "ข้าวโพดหวาน (ต้ม)", a: "corn", unit: "g", per: 100, def: 100, pc: ["ฝัก", 100], k: 96, p: 3.4, c: 21, f: 1.5 },
@@ -216,6 +218,8 @@ export const FOODS = [
     { id: "mama", g: "mama", vn: "ซองเล็ก 60 g", n: "มาม่า รวมเครื่องปรุง", a: "mama instant noodle", unit: "g", per: 100, def: 60, pc: ["ซอง", 60], k: 467, p: 10, c: 63.3, f: 18.3, na: 2500 },
     // Mama OK orange pack label: 85 g = 390 kcal, F16, P7, C55, Na1910.
     { id: "mama_tomyum", g: "mama", vn: "OK ซองส้ม 85 g", n: "มาม่า OK ซองส้ม 85 g (ฉลาก)", a: "mama ok instant noodle", unit: "g", per: 100, def: 85, pc: ["ซอง", 85], k: 459, p: 8.2, c: 64.7, f: 18.8, na: 2247 },
+    // Mama OK Tonkotsu label: 85 g = 380 kcal, F14 (sat 7), P7, C56, Na1550.
+    { id: "mama_tonkotsu", g: "mama", vn: "OK ทงคตสึ 85 g", n: "มาม่า OK ทงคตสึ 85 g (ฉลาก)", a: "mama ok tonkotsu oriental kitchen ราเมน", unit: "g", per: 100, def: 85, pc: ["ซอง", 85], k: 447, p: 8.2, c: 65.9, f: 16.5, na: 1824 },
   ]),
   // Fast-food chains: values from the chains' published nutrition (mostly global menus); Thai
   // menus and portions differ a little, so these are labelled as estimates.
