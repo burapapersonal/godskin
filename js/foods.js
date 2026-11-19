@@ -149,6 +149,8 @@ export const FOODS = [
     { id: "kmk_tod", g: "kmk", vn: "ไก่ทอด", n: "ข้าวมันไก่ทอด", a: "fried chicken rice", unit: "g", per: 100, def: 300, pc: ["จาน", 300], k: 230, p: 9, c: 24, f: 11 },
     { id: "fried_rice", n: "ข้าวผัดหมู/ไก่", a: "fried rice", unit: "g", per: 100, def: 350, pc: ["จาน", 350], k: 166, p: 6, c: 22, f: 6, na: 400 },
     { id: "catfish_teriyaki", n: "ปลาดุกเทอริยากิ (สุก, ไม่รวมข้าว, ประมาณ)", a: "catfish teriyaki ปลาดุก เทอริยากิ", unit: "g", per: 100, def: 150, pc: ["ชิ้น", 75], k: 195, p: 17, c: 9, f: 10, na: 620 },
+    // Pepper Lunch pork pepper rice with shrimp-fat sauce, regular plate: ~250 g rice, ~80 g pork, corn, butter, ~30 g shrimp-fat sauce. No published label.
+    { id: "pl_pork_shrimpfat", n: "Pepper Lunch ข้าวหมูมันกุ้ง (จานปกติ, ประมาณ)", a: "pepper lunch เปปเปอร์ลันช์ pepper rice หมู มันกุ้ง shrimp fat", unit: "จาน", per: 1, def: 1, k: 820, p: 30, c: 95, f: 34, na: 1500 },
     { id: "kai_jiao_rice", n: "ข้าวไข่เจียว (2 ฟอง)", a: "omelette rice", unit: "g", per: 100, def: 350, pc: ["จาน", 350], k: 185, p: 6.5, c: 17, f: 10 },
     { id: "khao_kha_moo", n: "ข้าวขาหมู", a: "pork leg rice", unit: "g", per: 100, def: 350, pc: ["จาน", 350], k: 197, p: 8.5, c: 20, f: 9, na: 450 },
     { id: "khao_moo_daeng", n: "ข้าวหมูแดง", a: "red pork rice", unit: "g", per: 100, def: 320, pc: ["จาน", 320], k: 169, p: 8, c: 22, f: 5.5, na: 400 },
